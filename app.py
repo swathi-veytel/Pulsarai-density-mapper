@@ -23,15 +23,11 @@ if app_env == 'GAE':
     # Modify the path to use '/app/data/' for App Engine
     prefix = "/app/"
 
-# Open and read the JSON file
-with open(SERVICE_ACCOUNT_FILE, 'r') as file:
-    service_account_json = json.load(file)
-
 st.set_page_config(layout="wide")
 
 # Function to authenticate GCS client
 def authenticate_gcs():
-    return storage.Client.from_service_account_info(service_account_json)
+    return storage.Client.from_service_account_info(SERVICE_ACCOUNT_FILE)
 
 # Function to download CSV from GCS
 def download_csv_from_gcs(filename):
