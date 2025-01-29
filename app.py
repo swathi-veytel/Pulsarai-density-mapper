@@ -99,11 +99,11 @@ def load_images(image_id, index):
 
     return cxr, textured_cxr, lung_noised
 
-
+user_password = st.secrets["general"]["user_password"]
 # Authentication logic
 def check_auth(username, password):
     if username in USERS:
-        if password == "Veytel2024":
+        if password == user_password:
             return username
     return None
 
