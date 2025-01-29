@@ -13,7 +13,7 @@ app_env = os.getenv('APP_ENV', 'GAE')  # Default to 'GAE' if the environment var
 GCS_BUCKET_NAME = "veytel-cloud-store"
 GCS_FOLDER_PATH = "density_mapper"
 
-SERVICE_ACCOUNT_FILE = 'keys/service-account.json'
+SERVICE_ACCOUNT_FILE = st.secrets["gcs_service_account"]
 
 USERS = ["GK", "Siddique", "Nameer", "Taaha", "Konstantine","Vijayakumar","Swathi", "Ellen", "Cathy", "Robin", "Anrey", "Song", "Kevin",
                                             "Aidan", "Mike", "Paul", "Test"]
@@ -24,7 +24,7 @@ if app_env == 'GAE':
     prefix = "/app/"
 
 # Open and read the JSON file
-with open(prefix+SERVICE_ACCOUNT_FILE, 'r') as file:
+with open(SERVICE_ACCOUNT_FILE, 'r') as file:
     service_account_json = json.load(file)
 
 st.set_page_config(layout="wide")
