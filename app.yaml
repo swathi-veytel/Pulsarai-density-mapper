@@ -1,0 +1,16 @@
+runtime: custom
+env: flex
+service: density-mapper
+
+handlers:
+  - url: /data
+    script: data
+
+
+
+# Optional, default is 1 instance
+manual_scaling:
+  instances: 1
+
+env_variables:
+  APP_ENV: "GAE"
