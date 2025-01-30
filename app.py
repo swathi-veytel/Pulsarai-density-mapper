@@ -146,7 +146,7 @@ def main():
         #image_id = (count - 1) // 3 + 1
         #index = (count - 1) % 3 + 1
         image_id = count  # Directly map count to image_id
-        index = 1  # No need for different indices, since each image is unique
+        index = 1 # No need for different indices, since each image is unique
         return image_id, index
 
     # Check if count exceeds the limit (e.g., 30)
@@ -200,11 +200,7 @@ def main():
         # Top row: Original CXR, Noise, Synthetic CXR
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-
             st.image(cxr, caption="Original CXR", width=300)
-            st.markdown("<div style='text-align:center;font-weight: bold; color: black;'>Original CXR</div>",
-                        unsafe_allow_html=True)
-
         with col2:
             st.image(textured_cxr, caption="Noise", width=300)
         with col3:
@@ -261,6 +257,9 @@ def main():
         apply_thresholds(cxr, textured_cxr, st.session_state.max_thresh0,
                          st.session_state.max_thresh1,
                          st.session_state.max_thresh2)
+
+        # Horizontal line to separate rows
+        st.divider()
 
         # Bottom row: Density maps with one max slider for each
         col1, col2, col3, col4 = st.columns(4)
