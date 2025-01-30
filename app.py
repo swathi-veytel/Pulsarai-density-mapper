@@ -57,7 +57,7 @@ def create_csv(user, count, max_thresh0, max_thresh1, max_thresh2):
     else:
         csv_content = "\n".join([",".join(row) for row in csv_data])
     csv_content += f"\n{count},{max_thresh0},{max_thresh1},{max_thresh2}\n"
-    filename = f"density_new_{user}.csv"
+    filename = f"density_mapper_v1_{user}.csv"
     upload_csv_to_gcs(csv_content, filename)
 
 # Function to apply thresholds and get different density masks
@@ -147,6 +147,7 @@ def main():
         #index = (count - 1) % 3 + 1
         image_id = count  # Directly map count to image_id
         index = 1 # No need for different indices, since each image is unique
+        print("getting count, image_id, index", count, image_id, index)
         return image_id, index
 
     # Check if count exceeds the limit (e.g., 30)
@@ -158,9 +159,6 @@ def main():
 
     # Load images based on image_id and index
     #cxr, textured_cxr, lung_noised = load_images(st.session_state.image_id, st.session_state.index)
-
-
-
 
     # Login logic
     if st.session_state.user is None:
@@ -182,9 +180,9 @@ def main():
 
         csv_data = read_csv_from_gcs(st.session_state.user)
         st.session_state.count = int(csv_data[-1][0])+1 if csv_data and len(csv_data) > 1 else 1
-
+        print("count from csv :",st.session_state.count)
         st.session_state.image_id, st.session_state.index = get_image_id_index(st.session_state.count)
-        print("stating count, image id, idx", st.session_state.count, st.session_state.image_id, st.session_state.index)
+        print("starting count, image id, idx", st.session_state.count, st.session_state.image_id, st.session_state.index)
 
         if (st.session_state.count == 0):
             empty_image = np.zeros((256, 256), dtype=np.uint8)
@@ -200,11 +198,11 @@ def main():
         # Top row: Original CXR, Noise, Synthetic CXR
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.image(cxr, caption="Original CXR", width=300)
+            st.image(cxr, caption="Original CXR", width=256)
         with col2:
-            st.image(textured_cxr, caption="Noise", width=300)
+            st.image(textured_cxr, caption="Noise", width=256)
         with col3:
-            st.image(lung_noised, caption="Synthetic CXR", width=300)
+            st.image(lung_noised, caption="Synthetic CXR", width=256)
         with col4:
             # Save button and progress tracking
             instructions_text = """
@@ -212,6 +210,25 @@ def main():
             """
             progress = st.slider("Progress", 1, 30, value=st.session_state.count, key="progress_slider", disabled=True)
             label = "Save & Continue"
+            if(st.session_state.count == 0):
+                label = "Start"
+                # Expandable instructions section
+            if st.button(label):
+                if st.session_state.count > 30:
+                    st.info("Processing complete! No further images to process.")
+                    return
+
+                print("saving count, image id, idx", st.session_state.count, st.session_state.image_id,
+                      st.session_state.index)
+                create_csv(st.session_state.user, st.session_state.count, st.session_state.max_thresh0,
+                           st.session_state.max_thresh1, st.session_state.max_thresh2)
+                st.success(f"Data saved!")
+
+                st.session_state.count += 1
+                st.session_state.image_id, st.session_state.index = get_image_id_index(st.session_state.count)
+                st.rerun()
+
+            #instructions:
             with st.expander(instructions_text, expanded=False):
                 st.markdown(
                     """
@@ -229,28 +246,6 @@ def main():
                     """,
                     unsafe_allow_html=True
                 )
-            if(st.session_state.count == 0):
-                label = "Start"
-                # Expandable instructions section
-
-
-            if st.button(label):
-                if st.session_state.count > 30:
-
-                    st.info("Processing complete! No further images to process.")
-                    return
-
-                print("saving count, image id, idx", st.session_state.count, st.session_state.image_id,
-                      st.session_state.index)
-                create_csv(st.session_state.user, st.session_state.count, st.session_state.max_thresh0,
-                           st.session_state.max_thresh1, st.session_state.max_thresh2)
-
-                st.success(f"Data saved!")
-
-                st.session_state.count += 1
-                st.session_state.image_id, st.session_state.index = get_image_id_index(st.session_state.count)
-                st.rerun()
-
                 # Re-render the progress bar with the updated count
                 #st.slider("Progress", 1, 30, value=st.session_state.count, key="progress_slider", disabled=True)
 
@@ -267,7 +262,7 @@ def main():
         with col1:
 
             cxr_with_dense_0 = cv.add(cxr, st.session_state.dense_0.astype(np.uint8))
-            st.image(cxr_with_dense_0, caption="CXR + Density 0", width=300)
+            st.image(cxr_with_dense_0, caption="CXR + Density 0", width=256)
             #st.image(st.session_state.dense_0, caption="Pixels @ Density 0", width=300)
             min_density0 = 0
             st.text_input("Min Density 0", value=min_density0, disabled=True)
@@ -282,12 +277,9 @@ def main():
                 st.rerun()
 
 
-
-
-
         with col2:
             cxr_with_dense_1 = cv.add(cxr, st.session_state.dense_1.astype(np.uint8))
-            st.image(cxr_with_dense_1, caption="CXR + Density 1", width=300)
+            st.image(cxr_with_dense_1, caption="CXR + Density 1", width=256)
             #st.image(st.session_state.dense_1, caption="Pixels @ Density 1", width=300)
             min_density1 = max_slider0
             st.text_input("Min Density 1", value=min_density1, disabled=True)
@@ -310,7 +302,7 @@ def main():
 
         with col3:
             cxr_with_dense_2 = cv.add(cxr, st.session_state.dense_2.astype(np.uint8))
-            st.image(cxr_with_dense_2, caption="CXR + Density 2", width=300)
+            st.image(cxr_with_dense_2, caption="CXR + Density 2", width=256)
             #st.image(st.session_state.dense_2, caption="Pixels @ Density 2", width=300)
             min_density2 = max_slider1
             st.text_input("Min Density 2", value=min_density2, disabled=True)
@@ -334,7 +326,7 @@ def main():
         with col4:
             # Density 3 (No max slider, always up to 255)
             cxr_with_dense_3 = cv.add(cxr, st.session_state.dense_3.astype(np.uint8))
-            st.image(cxr_with_dense_3, caption="CXR + Density 3", width=300)
+            st.image(cxr_with_dense_3, caption="CXR + Density 3", width=256)
             #st.image(st.session_state.dense_3, caption="Pixels @ Density 3", width=300)
             st.text_input("Min Density 3", value=st.session_state.max_thresh2, disabled=True)
             st.text_input("Max Density 3", value=255, disabled=True)
