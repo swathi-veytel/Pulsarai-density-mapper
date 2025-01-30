@@ -33,7 +33,7 @@ def download_csv_from_gcs(filename):
 
 # Function to read user-specific CSV data
 def read_csv_from_gcs(user):
-    filename = f"density_new_{user}.csv"
+    filename = f"density_mapper_v1_{user}.csv"
     try:
         csv_content = download_csv_from_gcs(filename)
         rows = csv_content.strip().split("\n")
@@ -140,16 +140,19 @@ def main():
 
     def get_image_id_index(count):
         # global image_id, index
+        #todo: modify for simgle image
         if count == 0:
             return 1, 1
-        image_id = (count - 1) // 3 + 1
-        index = (count - 1) % 3 + 1
+        #image_id = (count - 1) // 3 + 1
+        #index = (count - 1) % 3 + 1
+        image_id = count  # Directly map count to image_id
+        index = 1  # No need for different indices, since each image is unique
         return image_id, index
 
     # Check if count exceeds the limit (e.g., 30)
     if st.session_state.count >= 30:
         st.info("Processing complete! You have come to the end of this image set.")
-        #st.stop()  # Stop further execution beyond 30 images
+        st.stop()  # Stop further execution beyond 30 images
 
     #dense_0, dense_1, dense_2, dense_3
 
