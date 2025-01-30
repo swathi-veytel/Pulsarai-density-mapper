@@ -104,6 +104,23 @@ def check_auth(username, password):
 
 # App main function
 def main():
+    #st.set_page_config(layout="centered")
+    st.markdown("""
+        <style>
+        .main .block-container {
+            max-width: 800px; /* Adjust as needed */
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+        <style>
+        h1 { font-size: 20px !important; }
+        .stSlider { margin-top: -20px; }
+        .stTextInput { font-size: 14px !important; }
+        </style>
+    """, unsafe_allow_html=True)
+
     # Session state initialization
     if 'user' not in st.session_state:
         st.session_state.user = None
@@ -198,11 +215,11 @@ def main():
         # Top row: Original CXR, Noise, Synthetic CXR
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.image(cxr, caption="Original CXR", width=256)
+            st.image(cxr, caption="Original CXR", width=220)
         with col2:
-            st.image(textured_cxr, caption="Noise", width=256)
+            st.image(textured_cxr, caption="Noise", width=220)
         with col3:
-            st.image(lung_noised, caption="Synthetic CXR", width=256)
+            st.image(lung_noised, caption="Synthetic CXR", width=220)
         with col4:
             # Save button and progress tracking
             instructions_text = """
@@ -262,7 +279,7 @@ def main():
         with col1:
 
             cxr_with_dense_0 = cv.add(cxr, st.session_state.dense_0.astype(np.uint8))
-            st.image(cxr_with_dense_0, caption="CXR + Density 0", width=256)
+            st.image(cxr_with_dense_0, caption="CXR + Density 0", width=220)
             #st.image(st.session_state.dense_0, caption="Pixels @ Density 0", width=300)
             min_density0 = 0
             st.text_input("Min Density 0", value=min_density0, disabled=True)
@@ -279,7 +296,7 @@ def main():
 
         with col2:
             cxr_with_dense_1 = cv.add(cxr, st.session_state.dense_1.astype(np.uint8))
-            st.image(cxr_with_dense_1, caption="CXR + Density 1", width=256)
+            st.image(cxr_with_dense_1, caption="CXR + Density 1", width=220)
             #st.image(st.session_state.dense_1, caption="Pixels @ Density 1", width=300)
             min_density1 = max_slider0
             st.text_input("Min Density 1", value=min_density1, disabled=True)
@@ -302,7 +319,7 @@ def main():
 
         with col3:
             cxr_with_dense_2 = cv.add(cxr, st.session_state.dense_2.astype(np.uint8))
-            st.image(cxr_with_dense_2, caption="CXR + Density 2", width=256)
+            st.image(cxr_with_dense_2, caption="CXR + Density 2", width=220)
             #st.image(st.session_state.dense_2, caption="Pixels @ Density 2", width=300)
             min_density2 = max_slider1
             st.text_input("Min Density 2", value=min_density2, disabled=True)
@@ -326,7 +343,7 @@ def main():
         with col4:
             # Density 3 (No max slider, always up to 255)
             cxr_with_dense_3 = cv.add(cxr, st.session_state.dense_3.astype(np.uint8))
-            st.image(cxr_with_dense_3, caption="CXR + Density 3", width=256)
+            st.image(cxr_with_dense_3, caption="CXR + Density 3", width=220)
             #st.image(st.session_state.dense_3, caption="Pixels @ Density 3", width=300)
             st.text_input("Min Density 3", value=st.session_state.max_thresh2, disabled=True)
             st.text_input("Max Density 3", value=255, disabled=True)
