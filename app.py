@@ -5,50 +5,48 @@ import numpy as np
 from google.cloud import storage
 
 
-
 # Google Cloud configuration
 GCS_BUCKET_NAME = "veytel-cloud-store"
 GCS_FOLDER_PATH = "density_mapper"
 
+#gets service account key from secrets
 SERVICE_ACCOUNT_FILE = st.secrets["gcs_service_account"]
 
 USERS = ["GK", "Siddique", "Nameer", "Taaha", "Konstantine","Vijayakumar","Swathi", "Ellen", "Cathy", "Robin", "Anrey", "Song", "Kevin",
-                                            "Aidan", "Mike", "Paul", "Test"]
+                                            "Claire", "Rachel", "Mike", "Paul", "Test1", "Test2", "Test3", "Test4", "Test5", "Test6"]
 
 prefix = ""
 
 st.set_page_config(layout="wide")
 st.markdown("""
-    <style>
-        /* Reduce width of the main container */
-        .main .block-container {
-            max-width: 90%; /* Adjust this value */
-            margin-left: auto;
-            margin-right: auto;
-        }
-    </style>
-""", unsafe_allow_html=True)
-st.markdown("""
-        <style>
-        .main .block-container {
-            max-width: 800px; /* Adjust as needed */
-        }
-        </style>
-    """, unsafe_allow_html=True)
-st.markdown("""
-        <style>
-            /* Reduce top margin */
-            .block-container {
-                padding-top: 10px !important;
-            }
-        </style>
-    """, unsafe_allow_html=True)
-
-st.markdown("""
         <style>
         h1 { font-size: 20px !important; }
-        .stSlider { margin-top: -20px; }
-        .stTextInput { font-size: 14px !important; }
+       /* Reduce width of the main container */
+        .main .block-container {
+            max-width: 100%; /* Adjust this value */
+        }
+            /* Reduce top margin */
+            .block-container {
+                padding-top:20px !important;
+            }
+            /* Reduce button size */
+        div.stButton > button {
+            font-size: 10px !important;
+            padding: 5px 10px !important;
+            width: 200px 
+            height: 50 px
+        }
+
+        /* Reduce expander size */
+        div.streamlit-expanderContent {
+            font-size: 14px !important;
+            padding: 2px !important;
+        }
+        div.streamlit-expanderHeader {
+            font-size: 10px !important;
+            width: 200px !important;
+            height: 50px
+        }
         </style>
     """, unsafe_allow_html=True)
 
@@ -242,9 +240,6 @@ def main():
             st.image(lung_noised, caption="Synthetic CXR", width=200)
         with col4:
             # Save button and progress tracking
-            instructions_text = """
-                    Instructions
-            """
             progress = st.slider("Progress", 1, 30, value=st.session_state.count, key="progress_slider", disabled=True)
             label = "Save & Continue"
             if(st.session_state.count == 0):
@@ -266,7 +261,7 @@ def main():
                 st.rerun()
 
             #instructions:
-            with st.expander(instructions_text, expanded=False):
+            with st.expander("Instructions: ", expanded=False):
                 st.markdown(
                     """
                     <div style="background-color: yellow; padding: 10px; border-radius: 5px;">
