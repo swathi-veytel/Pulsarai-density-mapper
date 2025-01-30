@@ -5,9 +5,6 @@ import numpy as np
 from google.cloud import storage
 import json
 
-# Determine if the app is running on App Engine
-app_env = os.getenv('APP_ENV', 'GAE')  # Default to 'GAE' if the environment variable is not set
-
 
 # Google Cloud configuration
 GCS_BUCKET_NAME = "veytel-cloud-store"
@@ -18,10 +15,6 @@ SERVICE_ACCOUNT_FILE = st.secrets["gcs_service_account"]
 USERS = ["GK", "Siddique", "Nameer", "Taaha", "Konstantine","Vijayakumar","Swathi", "Ellen", "Cathy", "Robin", "Anrey", "Song", "Kevin",
                                             "Aidan", "Mike", "Paul", "Test"]
 
-prefix =""
-if app_env == 'GAE':
-    # Modify the path to use '/app/data/' for App Engine
-    prefix = "/app/"
 
 st.set_page_config(layout="wide")
 
