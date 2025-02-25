@@ -65,7 +65,7 @@ def download_csv_from_gcs(filename):
 
 # Function to read user-specific CSV data
 def read_csv_from_gcs(user):
-    filename = f"density_mapper_v1_{user}.csv"
+    filename = f"density_mapper_v2_{user}.csv"
     try:
         csv_content = download_csv_from_gcs(filename)
         rows = csv_content.strip().split("\n")
@@ -89,7 +89,7 @@ def create_csv(user, count, max_thresh0, max_thresh1, max_thresh2):
     else:
         csv_content = "\n".join([",".join(row) for row in csv_data])
     csv_content += f"\n{count},{max_thresh0},{max_thresh1},{max_thresh2}\n"
-    filename = f"density_mapper_v1_{user}.csv"
+    filename = f"density_mapper_v2_{user}.csv"
     upload_csv_to_gcs(csv_content, filename)
 
 # Function to apply thresholds and get different density masks
