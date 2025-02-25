@@ -6,8 +6,6 @@ handlers:
   - url: /data
     script: data
 
-
-
 # Optional, default is 1 instance
 manual_scaling:
   instances: 1

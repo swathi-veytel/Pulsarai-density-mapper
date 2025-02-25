@@ -3,20 +3,53 @@ import os
 import cv2 as cv
 import numpy as np
 from google.cloud import storage
-import json
 
 
 # Google Cloud configuration
 GCS_BUCKET_NAME = "veytel-cloud-store"
 GCS_FOLDER_PATH = "density_mapper"
 
+#gets service account key from secrets
 SERVICE_ACCOUNT_FILE = st.secrets["gcs_service_account"]
 
 USERS = ["GK", "Siddique", "Nameer", "Taaha", "Konstantine","Vijayakumar","Swathi", "Ellen", "Cathy", "Robin", "Anrey", "Song", "Kevin",
-                                            "Aidan", "Mike", "Paul", "Test"]
+                                            "Claire", "Rachel", "Mike", "Paul", "Test1", "Test2", "Test3", "Test4", "Test5", "Test6"]
 
+prefix = ""
 
 st.set_page_config(layout="wide")
+st.markdown("""
+        <style>
+        h1 { font-size: 20px !important; }
+       /* Reduce width of the main container */
+        .main .block-container {
+            max-width: 100%; /* Adjust this value */
+        }
+            /* Reduce top margin */
+            .block-container {
+                padding-top:20px !important;
+            }
+            /* Reduce button size */
+        div.stButton > button {
+            font-size: 10px !important;
+            padding: 5px 10px !important;
+            width: 200px 
+            height: 50 px
+        }
+
+        /* Reduce expander size */
+        div.streamlit-expanderContent {
+            font-size: 14px !important;
+            padding: 2px !important;
+        }
+        div.streamlit-expanderHeader {
+            font-size: 10px !important;
+            width: 200px !important;
+            height: 50px
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
 
 # Function to authenticate GCS client
 def authenticate_gcs():
@@ -32,7 +65,7 @@ def download_csv_from_gcs(filename):
 
 # Function to read user-specific CSV data
 def read_csv_from_gcs(user):
-    filename = f"density_new_{user}.csv"
+    filename = f"density_mapper_v2_{user}.csv"
     try:
         csv_content = download_csv_from_gcs(filename)
         rows = csv_content.strip().split("\n")
@@ -56,7 +89,7 @@ def create_csv(user, count, max_thresh0, max_thresh1, max_thresh2):
     else:
         csv_content = "\n".join([",".join(row) for row in csv_data])
     csv_content += f"\n{count},{max_thresh0},{max_thresh1},{max_thresh2}\n"
-    filename = f"density_new_{user}.csv"
+    filename = f"density_mapper_v2_{user}.csv"
     upload_csv_to_gcs(csv_content, filename)
 
 # Function to apply thresholds and get different density masks
@@ -103,6 +136,9 @@ def check_auth(username, password):
 
 # App main function
 def main():
+    #st.set_page_config(layout="centered")
+
+
     # Session state initialization
     if 'user' not in st.session_state:
         st.session_state.user = None
@@ -139,24 +175,25 @@ def main():
 
     def get_image_id_index(count):
         # global image_id, index
+        #todo: modify for simgle image
         if count == 0:
             return 1, 1
-        image_id = (count - 1) // 3 + 1
-        index = (count - 1) % 3 + 1
+        #image_id = (count - 1) // 3 + 1
+        #index = (count - 1) % 3 + 1
+        image_id = count  # Directly map count to image_id
+        index = 1 # No need for different indices, since each image is unique
+        print("getting count, image_id, index", count, image_id, index)
         return image_id, index
 
     # Check if count exceeds the limit (e.g., 30)
     if st.session_state.count >= 30:
         st.info("Processing complete! You have come to the end of this image set.")
-        #st.stop()  # Stop further execution beyond 30 images
+        st.stop()  # Stop further execution beyond 30 images
 
     #dense_0, dense_1, dense_2, dense_3
 
     # Load images based on image_id and index
     #cxr, textured_cxr, lung_noised = load_images(st.session_state.image_id, st.session_state.index)
-
-
-
 
     # Login logic
     if st.session_state.user is None:
@@ -178,9 +215,9 @@ def main():
 
         csv_data = read_csv_from_gcs(st.session_state.user)
         st.session_state.count = int(csv_data[-1][0])+1 if csv_data and len(csv_data) > 1 else 1
-
+        print("count from csv :",st.session_state.count)
         st.session_state.image_id, st.session_state.index = get_image_id_index(st.session_state.count)
-        print("stating count, image id, idx", st.session_state.count, st.session_state.image_id, st.session_state.index)
+        print("starting count, image id, idx", st.session_state.count, st.session_state.image_id, st.session_state.index)
 
         if (st.session_state.count == 0):
             empty_image = np.zeros((256, 256), dtype=np.uint8)
@@ -196,23 +233,35 @@ def main():
         # Top row: Original CXR, Noise, Synthetic CXR
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-
-            st.image(cxr, caption="Original CXR", width=300)
-            st.markdown("<div style='text-align:center;font-weight: bold; color: black;'>Original CXR</div>",
-                        unsafe_allow_html=True)
-
+            st.image(cxr, caption="Original CXR", width=200)
         with col2:
-            st.image(textured_cxr, caption="Noise", width=300)
+            st.image(textured_cxr, caption="Noise", width=200)
         with col3:
-            st.image(lung_noised, caption="Synthetic CXR", width=300)
+            st.image(lung_noised, caption="Synthetic CXR", width=200)
         with col4:
             # Save button and progress tracking
-            instructions_text = """
-                    Instructions
-            """
             progress = st.slider("Progress", 1, 30, value=st.session_state.count, key="progress_slider", disabled=True)
             label = "Save & Continue"
-            with st.expander(instructions_text, expanded=False):
+            if(st.session_state.count == 0):
+                label = "Start"
+                # Expandable instructions section
+            if st.button(label):
+                if st.session_state.count > 30:
+                    st.info("Processing complete! No further images to process.")
+                    return
+
+                print("saving count, image id, idx", st.session_state.count, st.session_state.image_id,
+                      st.session_state.index)
+                create_csv(st.session_state.user, st.session_state.count, st.session_state.max_thresh0,
+                           st.session_state.max_thresh1, st.session_state.max_thresh2)
+                st.success(f"Data saved!")
+
+                st.session_state.count += 1
+                st.session_state.image_id, st.session_state.index = get_image_id_index(st.session_state.count)
+                st.rerun()
+
+            #instructions:
+            with st.expander("Instructions: ", expanded=False):
                 st.markdown(
                     """
                     <div style="background-color: yellow; padding: 10px; border-radius: 5px;">
@@ -229,28 +278,6 @@ def main():
                     """,
                     unsafe_allow_html=True
                 )
-            if(st.session_state.count == 0):
-                label = "Start"
-                # Expandable instructions section
-
-
-            if st.button(label):
-                if st.session_state.count > 30:
-
-                    st.info("Processing complete! No further images to process.")
-                    return
-
-                print("saving count, image id, idx", st.session_state.count, st.session_state.image_id,
-                      st.session_state.index)
-                create_csv(st.session_state.user, st.session_state.count, st.session_state.max_thresh0,
-                           st.session_state.max_thresh1, st.session_state.max_thresh2)
-
-                st.success(f"Data saved!")
-
-                st.session_state.count += 1
-                st.session_state.image_id, st.session_state.index = get_image_id_index(st.session_state.count)
-                st.rerun()
-
                 # Re-render the progress bar with the updated count
                 #st.slider("Progress", 1, 30, value=st.session_state.count, key="progress_slider", disabled=True)
 
@@ -258,13 +285,16 @@ def main():
                          st.session_state.max_thresh1,
                          st.session_state.max_thresh2)
 
+        # Horizontal line to separate rows
+        st.divider()
+
         # Bottom row: Density maps with one max slider for each
         col1, col2, col3, col4 = st.columns(4)
 
         with col1:
 
             cxr_with_dense_0 = cv.add(cxr, st.session_state.dense_0.astype(np.uint8))
-            st.image(cxr_with_dense_0, caption="CXR + Density 0", width=300)
+            st.image(cxr_with_dense_0, caption="CXR + Density 0", width=200)
             #st.image(st.session_state.dense_0, caption="Pixels @ Density 0", width=300)
             min_density0 = 0
             st.text_input("Min Density 0", value=min_density0, disabled=True)
@@ -279,12 +309,9 @@ def main():
                 st.rerun()
 
 
-
-
-
         with col2:
             cxr_with_dense_1 = cv.add(cxr, st.session_state.dense_1.astype(np.uint8))
-            st.image(cxr_with_dense_1, caption="CXR + Density 1", width=300)
+            st.image(cxr_with_dense_1, caption="CXR + Density 1", width=200)
             #st.image(st.session_state.dense_1, caption="Pixels @ Density 1", width=300)
             min_density1 = max_slider0
             st.text_input("Min Density 1", value=min_density1, disabled=True)
@@ -307,7 +334,7 @@ def main():
 
         with col3:
             cxr_with_dense_2 = cv.add(cxr, st.session_state.dense_2.astype(np.uint8))
-            st.image(cxr_with_dense_2, caption="CXR + Density 2", width=300)
+            st.image(cxr_with_dense_2, caption="CXR + Density 2", width=200)
             #st.image(st.session_state.dense_2, caption="Pixels @ Density 2", width=300)
             min_density2 = max_slider1
             st.text_input("Min Density 2", value=min_density2, disabled=True)
@@ -331,7 +358,7 @@ def main():
         with col4:
             # Density 3 (No max slider, always up to 255)
             cxr_with_dense_3 = cv.add(cxr, st.session_state.dense_3.astype(np.uint8))
-            st.image(cxr_with_dense_3, caption="CXR + Density 3", width=300)
+            st.image(cxr_with_dense_3, caption="CXR + Density 3", width=200)
             #st.image(st.session_state.dense_3, caption="Pixels @ Density 3", width=300)
             st.text_input("Min Density 3", value=st.session_state.max_thresh2, disabled=True)
             st.text_input("Max Density 3", value=255, disabled=True)
