@@ -9,6 +9,3 @@ handlers:
 # Optional, default is 1 instance
 manual_scaling:
   instances: 1
-
-env_variables:
-  APP_ENV: "GAE"
