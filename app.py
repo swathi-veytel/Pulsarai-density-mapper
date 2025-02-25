@@ -13,7 +13,7 @@ GCS_FOLDER_PATH = "density_mapper"
 SERVICE_ACCOUNT_FILE = st.secrets["gcs_service_account"]
 
 USERS = ["GK", "Siddique", "Nameer", "Taaha", "Konstantine","Vijayakumar","Swathi", "Ellen", "Cathy", "Robin", "Anrey", "Song", "Kevin",
-                                            "Claire", "Rachel", "Mike", "Paul", "Test1", "Test2", "Test3", "Expert_Annotator_1", "Expert_Annotator_2", "Expert_Annotator_3", "Expert_Annotator_4", "Expert_Annotator_5", "Expert_Annotator_6"]
+                                            "Claire", "Rachel", "Mike", "Paul", "Test_1", "Test_2", "Test_3", "Expert_Annotator_1", "Expert_Annotator_2", "Expert_Annotator_3", "Expert_Annotator_4", "Expert_Annotator_5", "Expert_Annotator_6"]
 
 prefix = ""
 
