@@ -13,7 +13,7 @@ GCS_FOLDER_PATH = "density_mapper"
 SERVICE_ACCOUNT_FILE = st.secrets["gcs_service_account"]
 
 USERS = ["GK", "Siddique", "Nameer", "Taaha", "Konstantine","Vijayakumar","Swathi", "Ellen", "Cathy", "Robin", "Anrey", "Song", "Kevin",
-                                            "Claire", "Rachel", "Mike", "Paul", "Test1", "Test2", "Test3", "Test4", "Test5", "Test6"]
+                                            "Claire", "Rachel", "Mike", "Paul", "Test1", "Test2", "Test3", "Expert_Annotator_1", "Expert_Annotator_2", "Expert_Annotator_3", "Expert_Annotator_4", "Expert_Annotator_5", "Expert_Annotator_6"]
 
 prefix = ""
 
@@ -267,7 +267,6 @@ def main():
                     <div style="background-color: yellow; padding: 10px; border-radius: 5px;">
                     <ul>
                     <li>Set the brightness of your display to maximum.</li>
-                    <li>Initiate the process by clicking the 'Start' button.</li>
                     <li>Synthetic density (middle image in top row) is added to "Original CXR" to obtain "Synthetic CXR".</li>
                     <li>Adjust the brightness thresholds using the sliders provided to obtain the correct density maps for each level of RALE density.</li>
                     <li>If a density level has an absence of pixels at the upper limit, please set the Max Value to 255.</li>
