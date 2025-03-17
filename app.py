@@ -65,7 +65,7 @@ def download_csv_from_gcs(filename):
 
 # Function to read user-specific CSV data
 def read_csv_from_gcs(user):
-    filename = f"density_mapper_v2_{user}.csv"
+    filename = f"density_mapper_v3_{user}.csv"
     try:
         csv_content = download_csv_from_gcs(filename)
         rows = csv_content.strip().split("\n")
@@ -89,7 +89,7 @@ def create_csv(user, count, max_thresh0, max_thresh1, max_thresh2):
     else:
         csv_content = "\n".join([",".join(row) for row in csv_data])
     csv_content += f"\n{count},{max_thresh0},{max_thresh1},{max_thresh2}\n"
-    filename = f"density_mapper_v2_{user}.csv"
+    filename = f"density_mapper_v3_{user}.csv"
     upload_csv_to_gcs(csv_content, filename)
 
 # Function to apply thresholds and get different density masks
@@ -289,84 +289,72 @@ def main():
 
         # Bottom row: Density maps with one max slider for each
         col1, col2, col3, col4 = st.columns(4)
-
         with col1:
-
             cxr_with_dense_0 = cv.add(cxr, st.session_state.dense_0.astype(np.uint8))
             st.image(cxr_with_dense_0, caption="CXR + Density 0", width=200)
-            #st.image(st.session_state.dense_0, caption="Pixels @ Density 0", width=300)
             min_density0 = 0
             st.text_input("Min Density 0", value=min_density0, disabled=True)
 
-            # Max threshold slider for Density 0
-            max_slider0 = st.slider("Max Density 0", min_density0, 255, value=50, key="max_slider0")
+            # Allow slider to go up to 256, but display max as 255
+            max_slider0 = st.slider("Max Density 0", min_density0, 255,
+                                    value=st.session_state.max_thresh0, key="max_slider0")
+
             if max_slider0 != st.session_state.max_thresh0:
-                st.session_state.max_thresh0 = max_slider0  # Update session state
+                st.session_state.max_thresh0 = max_slider0
                 apply_thresholds(cxr, textured_cxr, st.session_state.max_thresh0,
-                                 st.session_state.max_thresh1,
-                                 st.session_state.max_thresh2)
+                                 st.session_state.max_thresh1, st.session_state.max_thresh2)
                 st.rerun()
 
+            # If Density 0 is set to 255, force the rest to 255
+            max_slider1_disabled = max_slider0 >= 255
+            max_slider2_disabled = max_slider1_disabled or st.session_state.max_thresh1 >= 255
 
         with col2:
             cxr_with_dense_1 = cv.add(cxr, st.session_state.dense_1.astype(np.uint8))
             st.image(cxr_with_dense_1, caption="CXR + Density 1", width=200)
-            #st.image(st.session_state.dense_1, caption="Pixels @ Density 1", width=300)
+
             min_density1 = max_slider0
             st.text_input("Min Density 1", value=min_density1, disabled=True)
 
+            max_slider1_value = 255 if max_slider1_disabled else max(st.session_state.max_thresh1, min_density1)
+            max_slider1 = st.slider("Max Density 1", min_density1, 256,
+                                    value=max_slider1_value, key="max_slider1", disabled=max_slider1_disabled)
 
-            # Ensure max_slider1 is not less than min_density1
-            if st.session_state.max_thresh1 < min_density1:
-                st.session_state.max_thresh1 = min_density1  # Adjust if necessary
-
-            # Max threshold slider for Density 1
-            max_slider1 = st.slider("Max Density 1", st.session_state.max_thresh0, 255, value= st.session_state.max_thresh1 if st.session_state.max_thresh1 > st.session_state.max_thresh0 else st.session_state.max_thresh0,
-                                    key="max_slider1")
-            if max_slider1 != st.session_state.max_thresh1:
-                st.session_state.max_thresh1 = max_slider1  # Update session state
+            if not max_slider1_disabled and max_slider1 != st.session_state.max_thresh1:
+                st.session_state.max_thresh1 = max_slider1
                 apply_thresholds(cxr, textured_cxr, st.session_state.max_thresh0,
-                                 st.session_state.max_thresh1,
-                                 st.session_state.max_thresh2)
+                                 st.session_state.max_thresh1, st.session_state.max_thresh2)
                 st.rerun()
 
+            # Disable next slider if max_slider1 is 255
+            max_slider2_disabled = max_slider1 >= 255
 
         with col3:
             cxr_with_dense_2 = cv.add(cxr, st.session_state.dense_2.astype(np.uint8))
             st.image(cxr_with_dense_2, caption="CXR + Density 2", width=200)
-            #st.image(st.session_state.dense_2, caption="Pixels @ Density 2", width=300)
+
             min_density2 = max_slider1
             st.text_input("Min Density 2", value=min_density2, disabled=True)
 
-            # Ensure max_slider2 is not less than min_density2
-            if st.session_state.max_thresh2 < min_density2:
-                st.session_state.max_thresh2 = min_density2  # Adjust if necessary
+            max_slider2_value = 255 if max_slider2_disabled else max(st.session_state.max_thresh2, min_density2)
+            max_slider2 = st.slider("Max Density 2", min_density2, 256,
+                                    value=max_slider2_value, key="max_slider2", disabled=max_slider2_disabled)
 
-            # Max threshold slider for Density 2
-            max_slider2 = st.slider("Max Density 2", st.session_state.max_thresh1, 255, value= st.session_state.max_thresh2 if st.session_state.max_thresh2 > st.session_state.max_thresh1 else st.session_state.max_thresh1,
-                                    key="max_slider2")
-            if max_slider2 != st.session_state.max_thresh2:
-                st.session_state.max_thresh2 = max_slider2  # Update session state
+            if not max_slider2_disabled and max_slider2 != st.session_state.max_thresh2:
+                st.session_state.max_thresh2 = max_slider2
                 apply_thresholds(cxr, textured_cxr, st.session_state.max_thresh0,
-                                 st.session_state.max_thresh1,
-                                 st.session_state.max_thresh2)
+                                 st.session_state.max_thresh1, st.session_state.max_thresh2)
                 st.rerun()
 
-
-
         with col4:
-            # Density 3 (No max slider, always up to 255)
             cxr_with_dense_3 = cv.add(cxr, st.session_state.dense_3.astype(np.uint8))
             st.image(cxr_with_dense_3, caption="CXR + Density 3", width=200)
-            #st.image(st.session_state.dense_3, caption="Pixels @ Density 3", width=300)
-            st.text_input("Min Density 3", value=st.session_state.max_thresh2, disabled=True)
+            st.text_input("Min Density 3", value=st.session_state.max_thresh2 if not max_slider2_disabled else 255,
+                          disabled=True)
             st.text_input("Max Density 3", value=255, disabled=True)
+
             apply_thresholds(cxr, textured_cxr, st.session_state.max_thresh0,
-                             st.session_state.max_thresh1,
-                             st.session_state.max_thresh2)
-
-
-
+                             st.session_state.max_thresh1, st.session_state.max_thresh2)
 
 
 # Run the app
