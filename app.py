@@ -14,8 +14,8 @@ GCS_FOLDER_PATH = "density_mapper"
 #gets service account key from secrets
 SERVICE_ACCOUNT_FILE = st.secrets["gcs_service_account"]
 
-USERS = ["GK", "Siddique", "Nameer", "Taaha", "Konstantine","Vijayakumar","Swathi", "Ellen", "Cathy", "Robin", "Anrey", "Song", "Kevin",
-                                            "Claire", "Rachel", "Mike", "Paul", "Test_1", "Test_2", "Test_3", "Expert_Annotator_1", "Expert_Annotator_2", "Expert_Annotator_3", "Expert_Annotator_4", "Expert_Annotator_5", "Expert_Annotator_6"]
+USERS = ["GK", "Siddique", "Nameer", "Taaha", "Konstantine","Vijayakumar","Swathi", "Ellen", "Cathy", "Robin", "Anrey", "Clara",  "Song", "Kevin",
+                                            "Claire", "Rachel", "Mike", "Paul", "Test_1", "Test_2", "Test_3", "Test_4", "Test_5", "Test_6", "Test_7", "Test_8", "Test_9", "Test_10", "Expert_Annotator_1", "Expert_Annotator_2", "Expert_Annotator_3", "Expert_Annotator_4", "Expert_Annotator_5", "Expert_Annotator_6"]
 
 prefix = ""
 
