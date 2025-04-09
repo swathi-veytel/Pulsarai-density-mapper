@@ -51,6 +51,12 @@ st.markdown("""
         }
         </style>
     """, unsafe_allow_html=True)
+color_map = {
+            0: (255, 105, 180),  # Pink
+            2: (0, 139, 139),  # Cyan
+            1: (50, 205, 50),  # Lime Green
+            3: (255, 165, 0),  # Orange
+        }
 
 csv_path = "Images/density_mapper_data_Mar_25.csv"  # update this to the actual path
 data_df = pd.read_csv(csv_path)
@@ -171,12 +177,6 @@ def overlay_dense_pixels(base_img, color=0, alpha=0.2):
     """
 
     # Define color map for overlays
-    color_map = {
-        0: (255, 105, 180),  # Pink
-        2: (0, 255, 255),    # Cyan
-        1: (50, 205, 50),    # Lime Green
-        3: (255, 165, 0),    # Orange
-    }
 
     # Convert base grayscale image to 3-channel BGR
     base_color = cv.cvtColor(base_img, cv.COLOR_GRAY2BGR)
@@ -244,6 +244,11 @@ def apply_density_diff(cxr, textured_cxr, density_mask):
 
 # Image loading function
 def load_images(image_id, index, prefix=""):
+    if st.session_state.image_id >= len(data_df):
+        st.info("Processing complete! No further images to process.")
+        st.stop()
+
+    #print(len(data_df))
     row = data_df.iloc[image_id]
 
     # Correct mapping based on actual folder and filename types
@@ -311,15 +316,17 @@ def main():
     if 'dense_3' not in st.session_state:
         st.session_state.dense_3 = 200  # Default value
 
-    if 'selected_max_density' not in st.session_state:
-        st.session_state.selected_max_density = "Density 3"  # Default value
+    if "overlay_toggle" not in st.session_state:
+        st.session_state.overlay_toggle = True  # default to checked
 
+    if "user_changed_density" not in st.session_state:
+        st.session_state.user_changed_density = False
 
     def get_image_id_index(count):
         # global image_id, index
         #todo: modify for simgle image
         if count == 0:
-            return 1, 1
+            return 0, 1
         #image_id = (count - 1) // 3 + 1
         #index = (count - 1) % 3 + 1
         image_id = count  # Directly map count to image_id
@@ -328,9 +335,9 @@ def main():
         return image_id, index
 
     # Check if count exceeds the limit (e.g., 30)
-    if st.session_state.count >= 101:
-        st.info("Processing complete! You have come to the end of this image set.")
-        st.stop()  # Stop further execution beyond 30 images
+    if st.session_state.image_id >= len(data_df):
+        st.info("No more images available. You have reached the end of the image set.")
+        st.stop()
 
     #dense_0, dense_1, dense_2, dense_3
 
@@ -349,11 +356,6 @@ def main():
                 st.session_state.user = user
                 st.success(f"Welcome {user}!")
                 st.session_state.show_brightness = True
-                # Show brightness message + image
-                #with st.spinner("Please increase your screen brightness..."):
-                #    st.markdown("### 🔆 Tip: Increase your screen brightness for better visibility.")
-                #    st.image("brightness.jpg", caption="How to increase brightness on Mac")
-                #    time.sleep(10)
 
                 st.rerun()
             else:
@@ -373,12 +375,12 @@ def main():
         st.title("Density Mapper")
 
         csv_data = read_csv_from_gcs(st.session_state.user)
-        st.session_state.count = int(csv_data[-1][0])+1 if csv_data and len(csv_data) > 1 else 1
+        st.session_state.count = int(csv_data[-1][0])+1 if csv_data and len(csv_data) > 1 else 0
         print("count from csv :",st.session_state.count)
         st.session_state.image_id, st.session_state.index = get_image_id_index(st.session_state.count)
         print("starting count, image id, idx", st.session_state.count, st.session_state.image_id, st.session_state.index)
 
-        if (st.session_state.count == 0):
+        if (st.session_state.count == 100):
             empty_image = np.zeros((256, 256), dtype=np.uint8)
             cxr = empty_image
             lung_mask = empty_image
@@ -399,13 +401,13 @@ def main():
             st.image(lung_noised, caption="Synthetic CXR", width=200)
         with col3:
             # Save button and progress tracking
-            progress = st.slider("Progress", 1, 100, value=st.session_state.count, key="progress_slider", disabled=True)
+            progress = st.slider("Progress", 0, 100, value=st.session_state.count, key="progress_slider", disabled=True)
             label = "Save & Continue"
             if(st.session_state.count == 0):
                 label = "Start"
                 # Expandable instructions section
             if st.button(label):
-                if st.session_state.count > 100:
+                if st.session_state.count >= len(data_df):
                     st.info("Processing complete! No further images to process.")
                     return
 
@@ -417,6 +419,10 @@ def main():
 
                 st.session_state.count += 1
                 st.session_state.image_id, st.session_state.index = get_image_id_index(st.session_state.count)
+
+                st.session_state["max_density_selection"] = "Density 3"
+                st.session_state.selected_max_density = 3
+                st.session_state.user_changed_density = False
                 st.rerun()
 
             #instructions:
@@ -427,10 +433,10 @@ def main():
                     <ul>
                     <li>🔆 Set your screen brightness to maximum for best visibility.</li>
                     <li> The synthetic image (right) is created by adding synthetic noise to the original CXR (left).</li>
-                    <li> Use the sliders to adjust pixel thresholds and define them at each density level.</li>
-                    <li> <strong>Overlay mode:</strong> Highlights pixels for each selected density using colored overlays. You can turn it off by unchecking.</li>
-                    <li> <strong>Progressive addition:</strong> At Density 2, you’ll see all pixels from Density 0 to 2 combined.</li>
                     <li> <strong>Max Density:</strong> If you think the synthetic CXR only goes up to, say, Density 2, select Density 2 as Maximum Density. You can ignore sliders for higher levels like Density 3.</li>
+                    <li> <strong>Overlay mode:</strong> Highlights pixels for each selected density using colored overlays. You can turn it off by unchecking.</li>
+                    <li> Use the sliders to adjust pixel thresholds and define them at each density level.</li>
+                    <li> <strong>Progressive addition:</strong> At Density 2, you’ll see all pixels from Density 0 to 2 combined and so on.</li>
                     <li> Click “Save & Continue” to move to the next image. Your progress is tracked.</li>
                     <li> You can close the window anytime. Your place will be saved automatically.</li>
                     </ul>
@@ -448,8 +454,34 @@ def main():
 
         # Horizontal line to separate rows
         st.divider()
+        prev_value = st.session_state.get("selected_max_density", None)
+        selected_max_density = st.radio(
+            "Select Maximum Density:",
+            options=["Density 0", "Density 1", "Density 2", "Density 3"],
+            key="max_density_selection",
+            horizontal=True
+        )
 
-        overlay_toggle = st.checkbox("Overlay on", value=True)
+        new_value = int(selected_max_density[-1])
+        if prev_value is not None and new_value != prev_value:
+            st.session_state.user_changed_density = True
+
+        st.session_state.selected_max_density = new_value
+
+        overlay_toggle = st.checkbox("Overlay on", value=st.session_state.overlay_toggle)
+        st.session_state.overlay_toggle = overlay_toggle
+
+        def rgb_to_hex(rgb):
+            return '#%02x%02x%02x' % rgb
+
+        if overlay_toggle:
+            cols = st.columns(4)
+            for i, col in enumerate(cols):
+                hex_color = rgb_to_hex(color_map[i])
+                col.markdown(
+                    f"<span style='font-weight:bold; font-size:16px; color:{hex_color}'>● Density {i}</span>",
+                    unsafe_allow_html=True
+                )
 
         # Bottom row: Density maps with one max slider for each
         col1, col2, col3, col4 = st.columns(4)
@@ -570,12 +602,13 @@ def main():
             else:
                 apply_thresholds_from_synthetic_range(cxr, lung_noised, st.session_state.max_thresh0,
                                          st.session_state.max_thresh1, st.session_state.max_thresh2)
-        selected_max_density = st.radio("Select Maximum Density:",
-            options=["Density 0", "Density 1", "Density 2", "Density 3"],
-            key="max_density_selection",
-            horizontal=True
-        )
-        st.session_state.selected_max_density = int(selected_max_density[-1])
+
+
+
+
+        #st.session_state.selected_max_density = int(st.session_state["max_density_selection"][-1])
+        #print("Max Density  : ",int(st.session_state["max_density_selection"][-1]))
+        #print("Max Density ss  : ", selected_max_density)
 
 
 # Run the app
