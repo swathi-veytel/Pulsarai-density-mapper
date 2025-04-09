@@ -69,7 +69,7 @@ def download_csv_from_gcs(filename):
 
 # Function to read user-specific CSV data
 def read_csv_from_gcs(user):
-    filename = f"density_mapper_v4_{user}.csv"
+    filename = f"density_mapper_v5_{user}.csv"
     try:
         csv_content = download_csv_from_gcs(filename)
         rows = csv_content.strip().split("\n")
@@ -86,18 +86,18 @@ def upload_csv_to_gcs(csv_content, filename):
     blob.upload_from_string(csv_content)
 
 # Function to create or append to CSV for the user
-def create_csv(user, count, max_thresh0, max_thresh1, max_thresh2):
+def create_csv(user, count, max_thresh0, max_thresh1, max_thresh2, max_density):
     csv_data = read_csv_from_gcs(user)
     if not csv_data:
-        csv_content = "count,max_thresh0,max_thresh1,max_thresh2"
+        csv_content = "count,max_thresh0,max_thresh1,max_thresh2,max_density"
     else:
         csv_content = "\n".join([",".join(row) for row in csv_data])
-    csv_content += f"\n{count},{max_thresh0},{max_thresh1},{max_thresh2}\n"
-    filename = f"density_mapper_v4_{user}.csv"
+    csv_content += f"\n{count},{max_thresh0},{max_thresh1},{max_thresh2},{max_density}\n"
+    filename = f"density_mapper_v5_{user}.csv"
     upload_csv_to_gcs(csv_content, filename)
 
 # Function to apply thresholds and get different density masks
-def apply_thresholds(cxr, textured_cxr, lung_mask, thresh1, thresh2, thresh3):
+def apply_thresholds_overlay(cxr, textured_cxr, lung_mask, thresh1, thresh2, thresh3):
     #max_val = np.percentile(cxr, 97)
     #scaled_thresh1 = thresh1 * max_val / 255
     #scaled_thresh2 = thresh2 * max_val / 255
@@ -121,36 +121,126 @@ def apply_thresholds(cxr, textured_cxr, lung_mask, thresh1, thresh2, thresh3):
         0,
     )
 
-    st.session_state.dense_2 = np.where((textured_cxr < thresh3) & lung_mask_bool, textured_cxr,
+    st.session_state.dense_2 = np.where((textured_cxr >= 0) & (textured_cxr < thresh3) & lung_mask_bool, textured_cxr,
         0,
     )
 
     st.session_state.dense_3 = np.where(
         (textured_cxr >= 0) & lung_mask_bool, textured_cxr, 0
     )
-def overlay_dense_pixels(base_img, dense_mask, color=(255, 105, 180), alpha=0.2):
+
+
+def apply_thresholds_from_synthetic_range(cxr, textured_cxr, thresh1, thresh2, thresh3):
+    # Convert to float to avoid underflow
+    cxr_f = cxr.astype(np.float32)
+    textured_f = textured_cxr.astype(np.float32)
+
+    # Compute difference image
+    diff = textured_f - cxr_f
+
+    # Create masks based on pixel intensity of synthetic image
+    mask_0 = (textured_f < thresh1)
+    mask_1 = (textured_f >= thresh1) & (textured_f < thresh2)
+    mask_2 = (textured_f >= thresh2) & (textured_f < thresh3)
+    mask_3 = (textured_f >= thresh3)
+
+    # Apply each mask to the diff (preserving sign)
+    dense_0 = np.where(mask_0, diff, 0)
+    dense_1 = np.where(mask_1, diff, 0)
+    dense_2 = np.where(mask_2, diff, 0)
+    dense_3 = np.where(mask_3, diff, 0)
+
+    # Store in session_state as float for precision, clip only for display
+    st.session_state.dense_0 = dense_0
+    st.session_state.dense_1 = dense_1
+    st.session_state.dense_2 = dense_2
+    st.session_state.dense_3 = dense_3
+
+
+def overlay_dense_pixels(base_img, color=0, alpha=0.2):
     """
-    Overlay dense_mask onto base_img using the specified RGB color.
-    Only non-zero pixels in dense_mask are highlighted.
+    Overlay exclusive density masks onto base_img.
+    Each pixel is colored according to which density range it falls into.
+    Densities are mutually exclusive.
+
+    color: int
+        0 - Only dense_0 (Pink)
+        1 - dense_0 (Pink), dense_1 (Cyan)
+        2 - + dense_2 (Lime Green)
+        3 - + dense_3 (Orange)
     """
-    # Convert grayscale image to 3-channel
+
+    # Define color map for overlays
+    color_map = {
+        0: (255, 105, 180),  # Pink
+        2: (0, 255, 255),    # Cyan
+        1: (50, 205, 50),    # Lime Green
+        3: (255, 165, 0),    # Orange
+    }
+
+    # Convert base grayscale image to 3-channel BGR
     base_color = cv.cvtColor(base_img, cv.COLOR_GRAY2BGR)
-
-    # Create solid color image
-    color_overlay = np.zeros_like(base_color, dtype=np.uint8)
-    color_overlay[:, :] = color
-
-    # Create 3-channel mask
-    mask = (dense_mask > 0).astype(np.uint8)
-    mask_3ch = np.stack([mask] * 3, axis=-1)
-
-    # Blend only where mask is 1
     blended = base_color.copy()
-    blended[mask_3ch == 1] = (
-            (1 - alpha) * base_color[mask_3ch == 1] + alpha * color_overlay[mask_3ch == 1]
-    ).astype(np.uint8)
+
+    # Go through each density level up to the selected one
+    for i in range(color + 1):
+        dense_mask = st.session_state.get(f"dense_{i}", None)
+        if dense_mask is None:
+            continue
+
+        # Create binary mask for this level only (non-zero values)
+        binary_mask = (dense_mask > 0).astype(np.uint8)
+        mask_3ch = np.stack([binary_mask] * 3, axis=-1)
+
+        # Prepare color overlay
+        overlay = np.zeros_like(base_color, dtype=np.uint8)
+        overlay[:, :] = color_map[i]
+
+        # Blend the selected color onto the base image where this density level is active
+        blended[mask_3ch == 1] = (
+            (1 - alpha) * blended[mask_3ch == 1] + alpha * overlay[mask_3ch == 1]
+        ).astype(np.uint8)
+
+        # Once a pixel is assigned to a density level, it should not be considered again
+        # So we zero it out from the remaining dense masks
+        for j in range(i + 1, 4):
+            next_mask = st.session_state.get(f"dense_{j}", None)
+            if next_mask is not None:
+                st.session_state[f"dense_{j}"] = np.where(binary_mask == 1, 0, next_mask)
 
     return blended
+
+def apply_density_diff(cxr, textured_cxr, density_mask):
+    """
+    Reconstruct a CXR image by adding only the pixel-wise difference
+    from textured_cxr to cxr at positions defined by the density mask.
+
+    Parameters:
+    - cxr: np.ndarray, original grayscale CXR image (float32 or uint8)
+    - textured_cxr: np.ndarray, noised/textured version of CXR (same shape)
+    - density_mask: np.ndarray, binary mask or thresholded map to select regions to add diff
+
+    Returns:
+    - added_image: np.ndarray, reconstructed image with partial difference added
+    """
+
+    # Ensure float32 for arithmetic
+    cxr = cxr.astype(np.float32)
+    textured_cxr = textured_cxr.astype(np.float32)
+
+    # Compute the difference
+    diff = textured_cxr - cxr
+
+    # Get diff only at selected density mask locations
+    selected_diff = np.where(density_mask > 0, diff, 0)
+
+    # Add to original CXR and clip to valid pixel range
+    added_image = np.clip(cxr + selected_diff, 0, 255).astype(np.uint8)
+
+    return added_image
+
+
+
 
 # Image loading function
 def load_images(image_id, index, prefix=""):
@@ -187,8 +277,6 @@ def check_auth(username, password):
 # App main function
 def main():
     #st.set_page_config(layout="centered")
-
-
     # Session state initialization
     if 'user' not in st.session_state:
         st.session_state.user = None
@@ -223,6 +311,8 @@ def main():
     if 'dense_3' not in st.session_state:
         st.session_state.dense_3 = 200  # Default value
 
+    if 'selected_max_density' not in st.session_state:
+        st.session_state.selected_max_density = "Density 3"  # Default value
 
 
     def get_image_id_index(count):
@@ -322,7 +412,7 @@ def main():
                 print("saving count, image id, idx", st.session_state.count, st.session_state.image_id,
                       st.session_state.index)
                 create_csv(st.session_state.user, st.session_state.count, st.session_state.max_thresh0,
-                           st.session_state.max_thresh1, st.session_state.max_thresh2)
+                           st.session_state.max_thresh1, st.session_state.max_thresh2, st.session_state.selected_max_density)
                 st.success(f"Data saved!")
 
                 st.session_state.count += 1
@@ -333,37 +423,55 @@ def main():
             with st.expander("Instructions: ", expanded=False):
                 st.markdown(
                     """
-                    <div style= padding: 10px; border-radius: 5px;">
+                    <div style="padding: 10px; border-radius: 5px;">
                     <ul>
-                    <li>Set the brightness of your display to maximum.</li>
-                    <li>Synthetic density (middle image in top row) is added to "Original CXR" to obtain "Synthetic CXR".</li>
-                    <li>Adjust the brightness thresholds using the sliders provided to obtain the correct density maps for each level of RALE density.</li>
-                    <li>If a density level has an absence of pixels at the upper limit, please set the Max Value to 255.</li>
-                    <li>Click "Save & continue" to proceed to the next image. The progress is shown in the progress bar.</li>
-                    <li>You may close the window and resume the process later when you reopen the window.</li>
+                    <li>🔆 Set your screen brightness to maximum for best visibility.</li>
+                    <li> The synthetic image (right) is created by adding synthetic noise to the original CXR (left).</li>
+                    <li> Use the sliders to adjust pixel thresholds and define them at each density level.</li>
+                    <li> <strong>Overlay mode:</strong> Highlights pixels for each selected density using colored overlays. You can turn it off by unchecking.</li>
+                    <li> <strong>Progressive addition:</strong> At Density 2, you’ll see all pixels from Density 0 to 2 combined.</li>
+                    <li> <strong>Max Density:</strong> If you think the synthetic CXR only goes up to, say, Density 2, select Density 2 as Maximum Density. You can ignore sliders for higher levels like Density 3.</li>
+                    <li> Click “Save & Continue” to move to the next image. Your progress is tracked.</li>
+                    <li> You can close the window anytime. Your place will be saved automatically.</li>
                     </ul>
                     </div>
+
                     """,
                     unsafe_allow_html=True
                 )
                 # Re-render the progress bar with the updated count
                 #st.slider("Progress", 1, 30, value=st.session_state.count, key="progress_slider", disabled=True)
 
-        apply_thresholds(cxr, lung_noised, lung_mask, st.session_state.max_thresh0,
+        apply_thresholds_overlay(cxr, lung_noised, lung_mask, st.session_state.max_thresh0,
                          st.session_state.max_thresh1,
                          st.session_state.max_thresh2)
 
         # Horizontal line to separate rows
         st.divider()
 
+        overlay_toggle = st.checkbox("Overlay on", value=True)
+
         # Bottom row: Density maps with one max slider for each
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            highlighted_dense_0 = overlay_dense_pixels(lung_noised, st.session_state.dense_0)
-            #cxr_with_dense_0 = cv.add(cxr, st.session_state.dense_0.astype(np.uint8))
-            st.image(highlighted_dense_0, caption="CXR + Density 0", width=200)
+            if overlay_toggle:
+                highlighted_dense_0 = overlay_dense_pixels(lung_noised, 0)
+                st.image(highlighted_dense_0, caption="CXR + Density 0", width=200)
+            else:
+                #cxr_with_dense_0 = cv.add(cxr, st.session_state.dense_0.astype(np.uint8))
+                diff = textured_cxr - cxr
+                #todo: get pixels from dense 0 from diff , when adding instead of adding dense_0 add pixels from diff at dnse 0
+
+                #cxr_with_dense_0 = np.clip(cxr.astype(np.float32) + st.session_state.dense_0, 0, 255).astype(np.uint8)
+                cxr_with_dense_0 = apply_density_diff(cxr, lung_noised, st.session_state.dense_0)
+                #cxr_with_dense_0 = cxr + st.session_state.dense_0.astype(np.uint8)
+                st.image(cxr_with_dense_0, caption="Original CXR + Density 0", width=200)
+
+
             min_density0 = 0
             st.text_input("Min Density 0", value=min_density0, disabled=True)
+
+
 
             # Allow slider to go up to 256, but display max as 255
             max_slider0 = st.slider("Max Density 0", min_density0, 255,
@@ -371,7 +479,11 @@ def main():
 
             if max_slider0 != st.session_state.max_thresh0:
                 st.session_state.max_thresh0 = max_slider0
-                apply_thresholds(cxr, lung_noised, lung_mask, st.session_state.max_thresh0,
+                if overlay_toggle:
+                    apply_thresholds_overlay(cxr, lung_noised, lung_mask, st.session_state.max_thresh0,
+                                 st.session_state.max_thresh1, st.session_state.max_thresh2)
+                else:
+                    apply_thresholds_from_synthetic_range(cxr, lung_noised, st.session_state.max_thresh0,
                                  st.session_state.max_thresh1, st.session_state.max_thresh2)
                 st.rerun()
 
@@ -380,9 +492,15 @@ def main():
             max_slider2_disabled = max_slider1_disabled or st.session_state.max_thresh1 >= 255
 
         with col2:
-            highlighted_dense_1 = overlay_dense_pixels(lung_noised, st.session_state.dense_1)
-            #cxr_with_dense_1 = cv.add(cxr, st.session_state.dense_1.astype(np.uint8))
-            st.image(highlighted_dense_1, caption="CXR + Density 1", width=200)
+            if overlay_toggle:
+                highlighted_dense_1 = overlay_dense_pixels(lung_noised, 1)
+                #cxr_with_dense_1 = cv.add(cxr, st.session_state.dense_1.astype(np.uint8))
+                st.image(highlighted_dense_1, caption="CXR + Density 1", width=200)
+            else:
+                #cxr_with_dense_1 = np.clip(cxr.astype(np.float32) + st.session_state.dense_1, 0, 255).astype(np.uint8)
+                cxr_with_dense_1 = apply_density_diff(cxr, lung_noised, st.session_state.dense_1)
+                st.image(cxr_with_dense_1, caption="Original CXR + Density 1", width=200)
+
 
             min_density1 = max_slider0
             st.text_input("Min Density 1", value=min_density1, disabled=True)
@@ -393,7 +511,11 @@ def main():
 
             if not max_slider1_disabled and max_slider1 != st.session_state.max_thresh1:
                 st.session_state.max_thresh1 = max_slider1
-                apply_thresholds(cxr, lung_noised, lung_mask, st.session_state.max_thresh0,
+                if overlay_toggle:
+                    apply_thresholds_overlay(cxr, lung_noised, lung_mask, st.session_state.max_thresh0,
+                                 st.session_state.max_thresh1, st.session_state.max_thresh2)
+                else:
+                    apply_thresholds_from_synthetic_range(cxr, lung_noised, st.session_state.max_thresh0,
                                  st.session_state.max_thresh1, st.session_state.max_thresh2)
                 st.rerun()
 
@@ -401,9 +523,14 @@ def main():
             max_slider2_disabled = max_slider1 >= 255
 
         with col3:
-            highlighted_dense_2 = overlay_dense_pixels(lung_noised, st.session_state.dense_2)
-            #cxr_with_dense_2 = cv.add(cxr, st.session_state.dense_2.astype(np.uint8))
-            st.image(highlighted_dense_2, caption="CXR + Density 2", width=200)
+            if overlay_toggle:
+                highlighted_dense_2 = overlay_dense_pixels(lung_noised, 2)
+                #cxr_with_dense_2 = cv.add(cxr, st.session_state.dense_2.astype(np.uint8))
+                st.image(highlighted_dense_2, caption="CXR + Density 2", width=200)
+            else:
+                #cxr_with_dense_2 = cv.add(cxr, st.session_state.dense_2.astype(np.uint8))
+                cxr_with_dense_2 = apply_density_diff(cxr, lung_noised, st.session_state.dense_2)
+                st.image(cxr_with_dense_2, caption="CXR + Density 2", width=200)
 
             min_density2 = max_slider1
             st.text_input("Min Density 2", value=min_density2, disabled=True)
@@ -414,20 +541,41 @@ def main():
 
             if not max_slider2_disabled and max_slider2 != st.session_state.max_thresh2:
                 st.session_state.max_thresh2 = max_slider2
-                apply_thresholds(cxr, lung_noised, lung_mask, st.session_state.max_thresh0,
+                if overlay_toggle:
+                    apply_thresholds_overlay(cxr, lung_noised, lung_mask, st.session_state.max_thresh0,
                                  st.session_state.max_thresh1, st.session_state.max_thresh2)
+                else:
+                    apply_thresholds_from_synthetic_range(cxr, lung_noised, st.session_state.max_thresh0,
+                                             st.session_state.max_thresh1, st.session_state.max_thresh2)
                 st.rerun()
 
         with col4:
-            highlighted_dense_3 = overlay_dense_pixels(lung_noised, st.session_state.dense_3)
-            #cxr_with_dense_3 = cv.add(cxr, st.session_state.dense_3.astype(np.uint8))
-            st.image(highlighted_dense_3, caption="CXR + Density 3", width=200)
+            if overlay_toggle:
+                highlighted_dense_3 = overlay_dense_pixels(lung_noised, 3)
+                #cxr_with_dense_3 = cv.add(cxr, st.session_state.dense_3.astype(np.uint8))
+                st.image(highlighted_dense_3, caption="CXR + Density 3", width=200)
+            else:
+                #cxr_with_dense_3 = cv.add(cxr, st.session_state.dense_3.astype(np.uint8))
+                cxr_with_dense_3 = apply_density_diff(cxr, lung_noised, st.session_state.dense_3)
+                st.image(cxr_with_dense_3, caption="CXR + Density 3", width=200)
+
+
             st.text_input("Min Density 3", value=st.session_state.max_thresh2 if not max_slider2_disabled else 255,
                           disabled=True)
             st.text_input("Max Density 3", value=255, disabled=True)
+            if overlay_toggle:
 
-            apply_thresholds(cxr, lung_noised, lung_mask, st.session_state.max_thresh0,
+                apply_thresholds_overlay(cxr, lung_noised, lung_mask, st.session_state.max_thresh0,
                              st.session_state.max_thresh1, st.session_state.max_thresh2)
+            else:
+                apply_thresholds_from_synthetic_range(cxr, lung_noised, st.session_state.max_thresh0,
+                                         st.session_state.max_thresh1, st.session_state.max_thresh2)
+        selected_max_density = st.radio("Select Maximum Density:",
+            options=["Density 0", "Density 1", "Density 2", "Density 3"],
+            key="max_density_selection",
+            horizontal=True
+        )
+        st.session_state.selected_max_density = int(selected_max_density[-1])
 
 
 # Run the app
