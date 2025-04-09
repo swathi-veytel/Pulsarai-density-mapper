@@ -459,6 +459,7 @@ def main():
             "Select Maximum Density:",
             options=["Density 0", "Density 1", "Density 2", "Density 3"],
             key="max_density_selection",
+            index=3,
             horizontal=True
         )
 
