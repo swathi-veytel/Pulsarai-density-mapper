@@ -324,6 +324,7 @@ def main():
 
     if "max_density_selection" not in st.session_state:
         st.session_state.max_density_selection = "Density 3"
+        st.session_state.selected_max_density = 3
 
     def get_image_id_index(count):
         # global image_id, index
