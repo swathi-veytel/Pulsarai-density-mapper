@@ -469,13 +469,18 @@ def main():
 
         st.session_state.selected_max_density = new_value
 
-        overlay_toggle = st.checkbox("Overlay on", value=st.session_state.overlay_toggle)
-        st.session_state.overlay_toggle = overlay_toggle
+        # Render the checkbox with a temp key
+        overlay_temp = st.checkbox("Overlay on", value=st.session_state.overlay_toggle, key="overlay_temp")
+
+        # Only update session state if it changed
+        if overlay_temp != st.session_state.overlay_toggle:
+            st.session_state.overlay_toggle = overlay_temp
+            st.rerun()
 
         def rgb_to_hex(rgb):
             return '#%02x%02x%02x' % rgb
 
-        if overlay_toggle:
+        if st.session_state.overlay_toggle:
             cols = st.columns(4)
             for i, col in enumerate(cols):
                 hex_color = rgb_to_hex(color_map[i])
@@ -483,11 +488,14 @@ def main():
                     f"<span style='font-weight:bold; font-size:16px; color:{hex_color}'>● Density {i}</span>",
                     unsafe_allow_html=True
                 )
+            #st.rerun()
+        #else:
+            #st.rerun()
 
         # Bottom row: Density maps with one max slider for each
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            if overlay_toggle:
+            if st.session_state.overlay_toggle:
                 highlighted_dense_0 = overlay_dense_pixels(lung_noised, 0)
                 st.image(highlighted_dense_0, caption="CXR + Density 0", width=200)
             else:
@@ -512,7 +520,7 @@ def main():
 
             if max_slider0 != st.session_state.max_thresh0:
                 st.session_state.max_thresh0 = max_slider0
-                if overlay_toggle:
+                if st.session_state.overlay_toggle:
                     apply_thresholds_overlay(cxr, lung_noised, lung_mask, st.session_state.max_thresh0,
                                  st.session_state.max_thresh1, st.session_state.max_thresh2)
                 else:
@@ -525,7 +533,7 @@ def main():
             max_slider2_disabled = max_slider1_disabled or st.session_state.max_thresh1 >= 255
 
         with col2:
-            if overlay_toggle:
+            if st.session_state.overlay_toggle:
                 highlighted_dense_1 = overlay_dense_pixels(lung_noised, 1)
                 #cxr_with_dense_1 = cv.add(cxr, st.session_state.dense_1.astype(np.uint8))
                 st.image(highlighted_dense_1, caption="CXR + Density 1", width=200)
@@ -544,7 +552,7 @@ def main():
 
             if not max_slider1_disabled and max_slider1 != st.session_state.max_thresh1:
                 st.session_state.max_thresh1 = max_slider1
-                if overlay_toggle:
+                if st.session_state.overlay_toggle:
                     apply_thresholds_overlay(cxr, lung_noised, lung_mask, st.session_state.max_thresh0,
                                  st.session_state.max_thresh1, st.session_state.max_thresh2)
                 else:
@@ -556,7 +564,7 @@ def main():
             max_slider2_disabled = max_slider1 >= 255
 
         with col3:
-            if overlay_toggle:
+            if st.session_state.overlay_toggle:
                 highlighted_dense_2 = overlay_dense_pixels(lung_noised, 2)
                 #cxr_with_dense_2 = cv.add(cxr, st.session_state.dense_2.astype(np.uint8))
                 st.image(highlighted_dense_2, caption="CXR + Density 2", width=200)
@@ -574,7 +582,7 @@ def main():
 
             if not max_slider2_disabled and max_slider2 != st.session_state.max_thresh2:
                 st.session_state.max_thresh2 = max_slider2
-                if overlay_toggle:
+                if st.session_state.overlay_toggle:
                     apply_thresholds_overlay(cxr, lung_noised, lung_mask, st.session_state.max_thresh0,
                                  st.session_state.max_thresh1, st.session_state.max_thresh2)
                 else:
@@ -583,7 +591,7 @@ def main():
                 st.rerun()
 
         with col4:
-            if overlay_toggle:
+            if st.session_state.overlay_toggle:
                 highlighted_dense_3 = overlay_dense_pixels(lung_noised, 3)
                 #cxr_with_dense_3 = cv.add(cxr, st.session_state.dense_3.astype(np.uint8))
                 st.image(highlighted_dense_3, caption="CXR + Density 3", width=200)
@@ -596,7 +604,7 @@ def main():
             st.text_input("Min Density 3", value=st.session_state.max_thresh2 if not max_slider2_disabled else 255,
                           disabled=True)
             st.text_input("Max Density 3", value=255, disabled=True)
-            if overlay_toggle:
+            if st.session_state.overlay_toggle:
 
                 apply_thresholds_overlay(cxr, lung_noised, lung_mask, st.session_state.max_thresh0,
                              st.session_state.max_thresh1, st.session_state.max_thresh2)
