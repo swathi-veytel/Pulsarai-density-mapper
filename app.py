@@ -322,6 +322,9 @@ def main():
     if "user_changed_density" not in st.session_state:
         st.session_state.user_changed_density = False
 
+    if "max_density_selection" not in st.session_state:
+        st.session_state.max_density_selection = "Density 3"
+
     def get_image_id_index(count):
         # global image_id, index
         #todo: modify for simgle image
@@ -459,7 +462,6 @@ def main():
             "Select Maximum Density:",
             options=["Density 0", "Density 1", "Density 2", "Density 3"],
             key="max_density_selection",
-            index=3,
             horizontal=True
         )
 
