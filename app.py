@@ -458,6 +458,11 @@ def main():
 
         # Horizontal line to separate rows
         st.divider()
+        if st.session_state.fresh_start:
+            st.session_state.max_density_selection = "Density 3"
+            st.session_state.selected_max_density = 3
+            st.session_state.fresh_start = False  # prevent resetting again
+
         prev_value = st.session_state.get("selected_max_density", None)
         selected_max_density = st.radio(
             "Select Maximum Density:",
