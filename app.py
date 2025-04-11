@@ -239,6 +239,16 @@ def apply_density_diff(cxr, textured_cxr, density_mask):
 
     return added_image
 
+def apply_gamma_correction(image, gamma=1.2):
+    # Normalize image to [0, 1] range if needed
+    if image.dtype != np.float32:
+        image = image.astype(np.float32) / 255.0
+
+    # Apply gamma correction
+    corrected = np.power(image, 1.0 / gamma)
+
+    # Convert back to 8-bit
+    return (corrected * 255).clip(0, 255).astype(np.uint8)
 
 
 
@@ -264,11 +274,13 @@ def load_images(image_id, index, prefix=""):
     print("Synthetic:", synthetic_path)
 
     # Read images
-    cxr = cv.imread(cxr_path, cv.IMREAD_GRAYSCALE)
-    lung_noised = cv.imread(lung_noised_path, cv.IMREAD_GRAYSCALE)
-    textured_cxr = cv.imread(synthetic_path, cv.IMREAD_GRAYSCALE)
-    lung_mask = cv.imread(mask_path, cv.IMREAD_GRAYSCALE)
-    return cxr, textured_cxr, lung_noised, lung_mask
+    cxr = cv.imread(cxr_path,  cv.IMREAD_GRAYSCALE)
+    cxr_gamma_corrected = apply_gamma_correction(cxr)
+    #cv.imread(image_path, cv.IMREAD_UNCHANGED)
+    lung_noised = cv.imread(lung_noised_path,  cv.IMREAD_GRAYSCALE)
+    textured_cxr = cv.imread(synthetic_path,  cv.IMREAD_GRAYSCALE)
+    lung_mask = cv.imread(mask_path,  cv.IMREAD_GRAYSCALE)
+    return cxr, cxr_gamma_corrected, cxr_gamma_corrected, lung_mask
 
 user_password = st.secrets["general"]["user_password"]
 # Authentication logic
@@ -457,7 +469,7 @@ def main():
                          st.session_state.max_thresh2)
 
         # Horizontal line to separate rows
-        st.divider()
+        #st.divider()
         if st.session_state.fresh_start:
             st.session_state.max_density_selection = "Density 3"
             st.session_state.selected_max_density = 3
@@ -465,7 +477,7 @@ def main():
 
         prev_value = st.session_state.get("selected_max_density", None)
         selected_max_density = st.radio(
-            "Select Maximum Density:",
+            "Select Maximum Density in Synthetic CXR:",
             options=["Density 0", "Density 1", "Density 2", "Density 3"],
             key="max_density_selection",
             horizontal=True
