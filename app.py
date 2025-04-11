@@ -486,6 +486,17 @@ def main():
                 st.session_state.overlay_toggle = overlay_temp
                 st.rerun()
 
+            def rgb_to_hex(rgb):
+                return '#%02x%02x%02x' % rgb
+
+            if st.session_state.overlay_toggle:
+                html_string = "<div style='margin-top:-15px;'>"
+                for i in range(4):
+                    hex_color = rgb_to_hex(color_map[i])
+                    html_string += f"<span style='font-weight:bold; font-size:16px; color:{hex_color}; margin-right:20px;'>● Density {i}</span>"
+                html_string += "</div>"
+                st.markdown(html_string, unsafe_allow_html=True)
+
         with but_col2:
             prev_value = st.session_state.get("selected_max_density", None)
             selected_max_density = st.radio(
@@ -502,17 +513,7 @@ def main():
             st.session_state.selected_max_density = new_value
 
 
-        def rgb_to_hex(rgb):
-            return '#%02x%02x%02x' % rgb
 
-        if st.session_state.overlay_toggle:
-            cols = st.columns(4)
-            for i, col in enumerate(cols):
-                hex_color = rgb_to_hex(color_map[i])
-                col.markdown(
-                    f"<span style='font-weight:bold; font-size:16px; color:{hex_color}'>● Density {i}</span>",
-                    unsafe_allow_html=True
-                )
             #st.rerun()
         #else:
             #st.rerun()
@@ -531,7 +532,7 @@ def main():
                 #cxr_with_dense_0 = np.clip(cxr.astype(np.float32) + st.session_state.dense_0, 0, 255).astype(np.uint8)
                 cxr_with_dense_0 = apply_density_diff(cxr, lung_noised, st.session_state.dense_0)
                 #cxr_with_dense_0 = cxr + st.session_state.dense_0.astype(np.uint8)
-                st.image(cxr_with_dense_0, caption="Original CXR + Density 0", width=200)
+                st.image(cxr_with_dense_0, caption="CXR + Density 0", width=200)
 
 
             min_density0 = 0
@@ -565,7 +566,7 @@ def main():
             else:
                 #cxr_with_dense_1 = np.clip(cxr.astype(np.float32) + st.session_state.dense_1, 0, 255).astype(np.uint8)
                 cxr_with_dense_1 = apply_density_diff(cxr, lung_noised, st.session_state.dense_1)
-                st.image(cxr_with_dense_1, caption="Original CXR + Density 1", width=200)
+                st.image(cxr_with_dense_1, caption="CXR + Density 1", width=200)
 
 
             min_density1 = max_slider0
