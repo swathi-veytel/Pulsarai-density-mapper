@@ -475,27 +475,32 @@ def main():
             st.session_state.selected_max_density = 3
             st.session_state.fresh_start = False  # prevent resetting again
 
-        prev_value = st.session_state.get("selected_max_density", None)
-        selected_max_density = st.radio(
-            "Select Maximum Density in Synthetic CXR:",
-            options=["Density 0", "Density 1", "Density 2", "Density 3"],
-            key="max_density_selection",
-            horizontal=True
-        )
+        # Top row: Original CXR, Noise, Synthetic CXR
+        but_col1, but_col2, but_col3 = st.columns(3)
+        with but_col1:
+            # Render the checkbox with a temp key
+            overlay_temp = st.checkbox("**Overlay Mode On**", value=st.session_state.overlay_toggle, key="overlay_temp")
 
-        new_value = int(selected_max_density[-1])
-        if prev_value is not None and new_value != prev_value:
-            st.session_state.user_changed_density = True
+            # Only update session state if it changed
+            if overlay_temp != st.session_state.overlay_toggle:
+                st.session_state.overlay_toggle = overlay_temp
+                st.rerun()
 
-        st.session_state.selected_max_density = new_value
+        with but_col2:
+            prev_value = st.session_state.get("selected_max_density", None)
+            selected_max_density = st.radio(
+                "**Select Maximum Density in Synthetic CXR:**",
+                options=["Density 0", "Density 1", "Density 2", "Density 3"],
+                key="max_density_selection",
+                horizontal=True
+            )
 
-        # Render the checkbox with a temp key
-        overlay_temp = st.checkbox("Overlay on", value=st.session_state.overlay_toggle, key="overlay_temp")
+            new_value = int(selected_max_density[-1])
+            if prev_value is not None and new_value != prev_value:
+                st.session_state.user_changed_density = True
 
-        # Only update session state if it changed
-        if overlay_temp != st.session_state.overlay_toggle:
-            st.session_state.overlay_toggle = overlay_temp
-            st.rerun()
+            st.session_state.selected_max_density = new_value
+
 
         def rgb_to_hex(rgb):
             return '#%02x%02x%02x' % rgb
