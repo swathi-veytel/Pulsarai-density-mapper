@@ -275,12 +275,12 @@ def load_images(image_id, index, prefix=""):
 
     # Read images
     cxr = cv.imread(cxr_path,  cv.IMREAD_GRAYSCALE)
-    cxr_gamma_corrected = apply_gamma_correction(cxr)
+    #cxr_gamma_corrected = apply_gamma_correction(cxr)
     #cv.imread(image_path, cv.IMREAD_UNCHANGED)
     lung_noised = cv.imread(lung_noised_path,  cv.IMREAD_GRAYSCALE)
     textured_cxr = cv.imread(synthetic_path,  cv.IMREAD_GRAYSCALE)
     lung_mask = cv.imread(mask_path,  cv.IMREAD_GRAYSCALE)
-    return cxr, cxr_gamma_corrected, cxr_gamma_corrected, lung_mask
+    return cxr, textured_cxr, lung_noised, lung_mask
 
 user_password = st.secrets["general"]["user_password"]
 # Authentication logic
@@ -479,23 +479,12 @@ def main():
         but_col1, but_col2, but_col3 = st.columns(3)
         with but_col1:
             # Render the checkbox with a temp key
-            overlay_temp = st.checkbox("**Overlay Mode On**", value=st.session_state.overlay_toggle, key="overlay_temp")
+            overlay_temp = st.checkbox("**Colored Overlay Mode On**", value=st.session_state.overlay_toggle, key="overlay_temp")
 
             # Only update session state if it changed
             if overlay_temp != st.session_state.overlay_toggle:
                 st.session_state.overlay_toggle = overlay_temp
                 st.rerun()
-
-            def rgb_to_hex(rgb):
-                return '#%02x%02x%02x' % rgb
-
-            if st.session_state.overlay_toggle:
-                html_string = "<div style='margin-top:-15px;'>"
-                for i in range(4):
-                    hex_color = rgb_to_hex(color_map[i])
-                    html_string += f"<span style='font-weight:bold; font-size:16px; color:{hex_color}; margin-right:20px;'>● Density {i}</span>"
-                html_string += "</div>"
-                st.markdown(html_string, unsafe_allow_html=True)
 
         with but_col2:
             prev_value = st.session_state.get("selected_max_density", None)
@@ -512,11 +501,20 @@ def main():
 
             st.session_state.selected_max_density = new_value
 
-
-
             #st.rerun()
         #else:
             #st.rerun()
+        def rgb_to_hex(rgb):
+            return '#%02x%02x%02x' % rgb
+
+        if st.session_state.overlay_toggle:
+            cols = st.columns(4)
+            for i, col in enumerate(cols):
+                hex_color = rgb_to_hex(color_map[i])
+                col.markdown(
+                    f"<span style='font-weight:bold; font-size:16px; color:{hex_color}'>● Density {i}</span>",
+                    unsafe_allow_html=True
+                )
 
         # Bottom row: Density maps with one max slider for each
         col1, col2, col3, col4 = st.columns(4)
