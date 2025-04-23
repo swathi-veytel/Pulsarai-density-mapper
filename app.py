@@ -491,38 +491,53 @@ def main():
             # Scrollable floating instruction box
             if st.session_state.show_instructions:
                 st.markdown("""
-                    <style>
-                    /* Force scrollbar visibility inside the floating box */
-                    .instruction-box::-webkit-scrollbar {
-                        width: 6px;
-                    }
+                        <style>
+                        .instruction-box {
+                            position: fixed;
+                            top: 80px;
+                            right: 20px;
+                            width: 320px;
+                            max-height: 300px;
+                            overflow-y: auto;
+                            background-color: #f9f9f9;
+                            padding: 15px;
+                            border: 1px solid #ccc;
+                            border-radius: 8px;
+                            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                            z-index: 1000;
+                            font-size: 13px;
+                            color: #000;
+                        }
 
-                    .instruction-box::-webkit-scrollbar-thumb {
-                        background-color: #ccc;
-                        border-radius: 4px;
-                    }
+                        /* Dark mode override */
+                        @media (prefers-color-scheme: dark) {
+                            .instruction-box {
+                                background-color: #1e1e1e;
+                                color: #f0f0f0;
+                                border-color: #444;
+                            }
+                            .instruction-box ul li {
+                                color: #f0f0f0;
+                            }
+                        }
 
-                    .instruction-box::-webkit-scrollbar-track {
-                        background-color: #f1f1f1;
-                    }
-                    </style>
+                        /* Scrollbar styling */
+                        .instruction-box::-webkit-scrollbar {
+                            width: 6px;
+                        }
+                        .instruction-box::-webkit-scrollbar-thumb {
+                            background-color: #aaa;
+                            border-radius: 4px;
+                        }
+                        .instruction-box::-webkit-scrollbar-track {
+                            background-color: #f1f1f1;
+                        }
+                        </style>
+                    """, unsafe_allow_html=True)
 
-                    <div class="instruction-box" style="
-                        position: fixed;
-                        top: 80px;
-                        right: 20px;
-                        width: 320px;
-                        max-height: 300px;
-                        overflow-y: scroll;
-                        background-color: #f9f9f9;
-                        padding: 15px;
-                        border: 1px solid #ccc;
-                        border-radius: 8px;
-                        box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                        z-index: 1000;
-                        font-size: 13px;
-                    ">
-                    <b>📝 Instructions (Scroll Down for more!)</b>
+                st.markdown("""
+                    <div class="instruction-box">
+                        <b>📝 Instructions (Scroll Down for more!)</b>
                     <ul>
                         <li>🔆 Set your screen brightness to maximum for best visibility.</li>
                         <li>The synthetic image (right) is created by adding synthetic noise to the original CXR (left).</li>
@@ -532,11 +547,13 @@ def main():
                         <li>Use the sliders to adjust pixel thresholds and define them at each density level.</li>
                         <li><strong>Progressive addition:</strong> At Density 2, you’ll see all pixels from Density 0 to 2 combined and so on.</li>
                         <li>Click “Save & Continue” to move to the next image. Your progress is tracked.</li>
-                        <li>You can close the window anytime. Your place will be saved automatically.</li></ul>
+                        <li>You can close the window anytime. Your place will be saved automatically.</li>
+                    </ul>
                     </div>
                 """, unsafe_allow_html=True)
-                # Re-render the progress bar with the updated count
-                #st.slider("Progress", 1, 30, value=st.session_state.count, key="progress_slider", disabled=True)
+
+
+
             st.markdown(f"<div style='text-align: center; font-size: 0.9em; color: gray;'>Image: {image_name}</div>", unsafe_allow_html=True)
 
             with col4:
