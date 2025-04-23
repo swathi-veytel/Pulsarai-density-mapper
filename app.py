@@ -22,23 +22,15 @@ prefix = ""
 st.set_page_config(layout="wide")
 st.markdown("""
         <style>
-        h1 { font-size: 20px !important; }
+        h1 { font-size: 16px !important; }
        /* Reduce width of the main container */
         .main .block-container {
             max-width: 100%; /* Adjust this value */
         }
             /* Reduce top margin */
             .block-container {
-                padding-top:20px !important;
+                padding-top:10px !important;
             }
-            /* Reduce button size */
-        div.stButton > button {
-            font-size: 10px !important;
-            padding: 5px 10px !important;
-            width: 200px 
-            height: 50 px
-        }
-
         /* Reduce expander size */
         div.streamlit-expanderContent {
             font-size: 14px !important;
@@ -51,12 +43,46 @@ st.markdown("""
         }
         </style>
     """, unsafe_allow_html=True)
+
+
+
+st.markdown("""
+            <style>
+            
+                div.stButton > button {
+                    padding: 4px 6px;  /* Reduce top/bottom padding */
+                    font-size: 11px;    /* Optional: Smaller font */
+                }
+        
+            /* Reduce height and font size for text input */
+            input[type="text"] {
+                padding: 4px 6px;
+                font-size: 12px;
+            }
+            div[role="radiogroup"] label {
+        font-size: 11px !important;
+        line-height: 1.2 !important;
+    }
+
+            /* Reduce font size of slider labels */
+            .stSlider > div[data-baseweb="slider"] {
+                padding-top: 0.1rem;
+                padding-bottom: 0.1rem;
+            }
+            .stSlider label, .stSlider span {
+                font-size: 11px;
+            }
+            </style>
+        """, unsafe_allow_html=True)
 color_map = {
-            0: (255, 105, 180),  # Pink
-            2: (0, 139, 139),  # Cyan
-            1: (50, 205, 50),  # Lime Green
-            3: (255, 165, 0),  # Orange
+            0: (129, 212, 250), # blue
+            1: (152, 255, 152), # mint green
+            2: (229, 185, 0),  # Orange
+            3: (255, 0, 0)  # red
         }
+
+#2: (255, 105, 180),  # Pink
+#0: (50, 205, 50),  # Lime Green
 
 csv_path = "Images/density_mapper_data_Mar_25.csv"  # update this to the actual path
 data_df = pd.read_csv(csv_path)
@@ -75,7 +101,7 @@ def download_csv_from_gcs(filename):
 
 # Function to read user-specific CSV data
 def read_csv_from_gcs(user):
-    filename = f"density_mapper_v6_{user}.csv"
+    filename = f"density_mapper_v8_{user}.csv"
     try:
         csv_content = download_csv_from_gcs(filename)
         rows = csv_content.strip().split("\n")
@@ -92,14 +118,14 @@ def upload_csv_to_gcs(csv_content, filename):
     blob.upload_from_string(csv_content)
 
 # Function to create or append to CSV for the user
-def create_csv(user, count, max_thresh0, max_thresh1, max_thresh2, max_density):
+def create_csv(user, imagName, count, max_thresh0, max_thresh1, max_thresh2, max_density):
     csv_data = read_csv_from_gcs(user)
     if not csv_data:
-        csv_content = "count,max_thresh0,max_thresh1,max_thresh2,max_density"
+        csv_content = "imagName,count,max_thresh0,max_thresh1,max_thresh2,max_density"
     else:
         csv_content = "\n".join([",".join(row) for row in csv_data])
-    csv_content += f"\n{count},{max_thresh0},{max_thresh1},{max_thresh2},{max_density}\n"
-    filename = f"density_mapper_v6_{user}.csv"
+    csv_content += f"\n{imagName},{count},{max_thresh0},{max_thresh1},{max_thresh2},{max_density}\n"
+    filename = f"density_mapper_v8_{user}.csv"
     upload_csv_to_gcs(csv_content, filename)
 
 # Function to apply thresholds and get different density masks
@@ -337,6 +363,8 @@ def main():
     if "max_density_selection" not in st.session_state:
         st.session_state.max_density_selection = "Density 3"
         st.session_state.selected_max_density = 3
+    if "show_instructions" not in st.session_state:
+        st.session_state.show_instructions = False
 
     def get_image_id_index(count):
         # global image_id, index
@@ -391,7 +419,7 @@ def main():
         st.title("Density Mapper")
 
         csv_data = read_csv_from_gcs(st.session_state.user)
-        st.session_state.count = int(csv_data[-1][0])+1 if csv_data and len(csv_data) > 1 else 0
+        st.session_state.count = int(csv_data[-1][1])+1 if csv_data and len(csv_data) > 1 else 0
         print("count from csv :",st.session_state.count)
         st.session_state.image_id, st.session_state.index = get_image_id_index(st.session_state.count)
         print("starting count, image id, idx", st.session_state.count, st.session_state.image_id, st.session_state.index)
@@ -408,7 +436,12 @@ def main():
             cxr, textured_cxr, lung_noised, lung_mask = load_images(st.session_state.image_id, st.session_state.index)
 
         # Top row: Original CXR, Noise, Synthetic CXR
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
+        if st.session_state.count < len(data_df):
+            image_name = data_df.iloc[st.session_state.count]['imgName']
+        else:
+            image_name = "Empty"
+        image_name = image_name.replace(".png", "")
         with col1:
             st.image(cxr, caption="Original CXR", width=200)
         #with col2:
@@ -418,18 +451,20 @@ def main():
         with col3:
             # Save button and progress tracking
             progress = st.slider("Progress", 0, 100, value=st.session_state.count, key="progress_slider", disabled=True)
+
             label = "Save & Continue"
             if(st.session_state.count == 0):
                 label = "Start"
                 # Expandable instructions section
+
             if st.button(label):
                 if st.session_state.count >= len(data_df):
-                    st.info("Processing complete! No further images to process.")
+                    st.info("Processing complete 🎉! No further images to process. You may close the window!")
                     return
 
                 print("saving count, image id, idx", st.session_state.count, st.session_state.image_id,
                       st.session_state.index)
-                create_csv(st.session_state.user, st.session_state.count, st.session_state.max_thresh0,
+                create_csv(st.session_state.user, data_df.iloc[st.session_state.count]['imgName'], st.session_state.count, st.session_state.max_thresh0,
                            st.session_state.max_thresh1, st.session_state.max_thresh2, st.session_state.selected_max_density)
                 st.success(f"Data saved!")
 
@@ -441,32 +476,85 @@ def main():
                 st.session_state.user_changed_density = False
                 st.rerun()
 
-            #instructions:
-            with st.expander("Instructions: ", expanded=False):
-                st.markdown(
-                    """
-                    <div style="padding: 10px; border-radius: 5px;">
-                    <ul>
-                    <li>🔆 Set your screen brightness to maximum for best visibility.</li>
-                    <li> The synthetic image (right) is created by adding synthetic noise to the original CXR (left).</li>
-                    <li> <strong>Max Density:</strong> If you think the synthetic CXR only goes up to, say, Density 2, select Density 2 as Maximum Density. You can ignore sliders for higher levels like Density 3.</li>
-                    <li> <strong>Overlay mode:</strong> Highlights pixels for each selected density using colored overlays. You can turn it off by unchecking.</li>
-                    <li> Use the sliders to adjust pixel thresholds and define them at each density level.</li>
-                    <li> <strong>Progressive addition:</strong> At Density 2, you’ll see all pixels from Density 0 to 2 combined and so on.</li>
-                    <li> Click “Save & Continue” to move to the next image. Your progress is tracked.</li>
-                    <li> You can close the window anytime. Your place will be saved automatically.</li>
-                    </ul>
-                    </div>
 
-                    """,
-                    unsafe_allow_html=True
-                )
+            #instructions:
+
+            if st.session_state.show_instructions:
+                if st.button("❌ Hide Instructions"):
+                    st.session_state.show_instructions = False
+                    st.rerun()
+            else:
+                if st.button("💡 Show Instructions"):
+                    st.session_state.show_instructions = True
+                    st.rerun()
+
+            # Scrollable floating instruction box
+            if st.session_state.show_instructions:
+                st.markdown("""
+                    <style>
+                    /* Force scrollbar visibility inside the floating box */
+                    .instruction-box::-webkit-scrollbar {
+                        width: 6px;
+                    }
+
+                    .instruction-box::-webkit-scrollbar-thumb {
+                        background-color: #ccc;
+                        border-radius: 4px;
+                    }
+
+                    .instruction-box::-webkit-scrollbar-track {
+                        background-color: #f1f1f1;
+                    }
+                    </style>
+
+                    <div class="instruction-box" style="
+                        position: fixed;
+                        top: 80px;
+                        right: 20px;
+                        width: 320px;
+                        max-height: 300px;
+                        overflow-y: scroll;
+                        background-color: #f9f9f9;
+                        padding: 15px;
+                        border: 1px solid #ccc;
+                        border-radius: 8px;
+                        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                        z-index: 1000;
+                        font-size: 13px;
+                    ">
+                    <b>📝 Instructions (Scroll Down for more!)</b>
+                    <ul>
+                        <li>🔆 Set your screen brightness to maximum for best visibility.</li>
+                        <li>The synthetic image (right) is created by adding synthetic noise to the original CXR (left).</li>
+                        <li><strong>Max Density:</strong> If you think the synthetic CXR only goes up to, say, Density 2, select Density 2 as Maximum Density.</li>
+                        <li><strong>Overlay mode ON:</strong> Highlights selected pixel ranges on the synthetic image using unique colors for each density level.</li>
+                        <li><strong>Overlay mode OFF:</strong> Adds the selected pixel ranges directly to the original image without any color highlights.</li>
+                        <li>Use the sliders to adjust pixel thresholds and define them at each density level.</li>
+                        <li><strong>Progressive addition:</strong> At Density 2, you’ll see all pixels from Density 0 to 2 combined and so on.</li>
+                        <li>Click “Save & Continue” to move to the next image. Your progress is tracked.</li>
+                        <li>You can close the window anytime. Your place will be saved automatically.</li></ul>
+                    </div>
+                """, unsafe_allow_html=True)
                 # Re-render the progress bar with the updated count
                 #st.slider("Progress", 1, 30, value=st.session_state.count, key="progress_slider", disabled=True)
+            st.markdown(f"<div style='text-align: center; font-size: 0.9em; color: gray;'>Image: {image_name}</div>", unsafe_allow_html=True)
+
+            with col4:
+                if st.session_state.overlay_toggle:
+                    scale_image_path = os.path.join("Images", "density_scale.png")
+                    scale_image = cv.imread(scale_image_path)
+
+                    if scale_image is not None:
+                        scale_image = cv.cvtColor(scale_image, cv.COLOR_BGR2RGB)  # Convert to RGB
+                        st.image(scale_image, caption="color scale", width=150)
+                    else:
+                        st.warning("Could not load the scale image.")
+
 
         apply_thresholds_overlay(cxr, lung_noised, lung_mask, st.session_state.max_thresh0,
                          st.session_state.max_thresh1,
                          st.session_state.max_thresh2)
+
 
         # Horizontal line to separate rows
         #st.divider()
@@ -504,17 +592,6 @@ def main():
             #st.rerun()
         #else:
             #st.rerun()
-        def rgb_to_hex(rgb):
-            return '#%02x%02x%02x' % rgb
-
-        if st.session_state.overlay_toggle:
-            cols = st.columns(4)
-            for i, col in enumerate(cols):
-                hex_color = rgb_to_hex(color_map[i])
-                col.markdown(
-                    f"<span style='font-weight:bold; font-size:16px; color:{hex_color}'>● Density {i}</span>",
-                    unsafe_allow_html=True
-                )
 
         # Bottom row: Density maps with one max slider for each
         col1, col2, col3, col4 = st.columns(4)
@@ -557,6 +634,7 @@ def main():
             max_slider2_disabled = max_slider1_disabled or st.session_state.max_thresh1 >= 255
 
         with col2:
+
             if st.session_state.overlay_toggle:
                 highlighted_dense_1 = overlay_dense_pixels(lung_noised, 1)
                 #cxr_with_dense_1 = cv.add(cxr, st.session_state.dense_1.astype(np.uint8))
