@@ -374,11 +374,14 @@ def main():
     if "show_instructions" not in st.session_state:
         st.session_state.show_instructions = False
 
+
     # Initialize previous zoom slider state
     if "prev_zoom_slider" not in st.session_state:
         st.session_state.prev_zoom_slider = 1  # default value
     if "zoom_slider_value" not in st.session_state:
         st.session_state.zoom_slider_value = 1  # current visible slider value
+    if "zoom_level" not in st.session_state:
+        st.session_state.zoom_level = 200
 
     def get_image_id_index(count):
         # global image_id, index
@@ -502,7 +505,7 @@ def main():
                 st.session_state["max_density_selection"] = "Density 3"
                 st.session_state.selected_max_density = 3
                 st.session_state.user_changed_density = False
-            
+
                 st.rerun()
 
 
@@ -646,7 +649,7 @@ def main():
         with col1:
             if st.session_state.overlay_toggle:
                 highlighted_dense_0 = overlay_dense_pixels(lung_noised, 0)
-                st.image(highlighted_dense_0, caption="CXR + Density 0", width=st.session_state.zoom_level)
+                st.image(highlighted_dense_0, caption="CXR + Density 0", width=st.session_state.zoo)
             else:
                 #cxr_with_dense_0 = cv.add(cxr, st.session_state.dense_0.astype(np.uint8))
                 diff = textured_cxr - cxr
