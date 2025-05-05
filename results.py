@@ -74,7 +74,7 @@ def show_results():
     st.title("\U0001F4CA Annotator Results Viewer")
 
     view_option = st.radio("Select Results View Mode:",
-                           ["View UPMC Users", "Select Annotators to Compare", "View All Annotators"],
+                           ["View results from UPMC Users", "Select Annotators to Compare", "View results All users"],
                            index=0)
 
     overlay_mode = st.checkbox("Show Colored Overlays", value=True)
@@ -105,7 +105,7 @@ def show_results():
         if not selected_users:
             st.warning("Please select users to compare.")
             return
-    elif view_option == "View UPMC Users":
+    elif view_option == "View results from UPMC Users":
         selected_users = UPMC_USERS
     else:
         selected_users = USERS
