@@ -5,6 +5,9 @@ import numpy as np
 from google.cloud import storage
 import pandas as pd
 import time
+# Import the external results viewer
+from results import show_results
+from utils import read_user_csv, USERS
 
 
 # Google Cloud configuration
@@ -265,18 +268,6 @@ def apply_density_diff(cxr, textured_cxr, density_mask):
 
     return added_image
 
-def apply_gamma_correction(image, gamma=1.2):
-    # Normalize image to [0, 1] range if needed
-    if image.dtype != np.float32:
-        image = image.astype(np.float32) / 255.0
-
-    # Apply gamma correction
-    corrected = np.power(image, 1.0 / gamma)
-
-    # Convert back to 8-bit
-    return (corrected * 255).clip(0, 255).astype(np.uint8)
-
-
 
 # Image loading function
 def load_images(image_id, index, prefix=""):
@@ -420,14 +411,30 @@ def main():
                 st.rerun()
             else:
                 st.error("Invalid credentials")
-    elif st.session_state.show_brightness:
+    elif st.session_state.show_brightness and not st.session_state.get("show_results_view", False):
         st.success(f"Welcome {st.session_state.user}!")
+        st.divider()
+
+        # Show two buttons: Proceed to Annotate and View Results
+        proceed_col, results_col = st.columns([1, 2])
+
+        with proceed_col:
+            if st.button("🚀 Proceed to Annotate"):
+                st.session_state.show_brightness = False
+                st.session_state.show_results_view = False
+                st.rerun()
+
+        with results_col:
+            if st.button("📊 View Results"):
+                st.session_state.show_results_view = True
+                st.session_state.show_brightness = False
+                st.rerun()
+        st.divider()
         st.spinner("Please increase your screen brightness...")
         st.markdown("### 🔆 Tip: Increase your screen brightness for better visibility.")
-        if st.button("Proceed"):
-            st.session_state.show_brightness = False
-            st.rerun()
         st.image("brightness.jpg", caption="How to increase brightness on Mac")
+    elif st.session_state.get("show_results_view", False):
+        show_results()
 
 
     else:
