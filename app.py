@@ -686,7 +686,7 @@ def main():
                                                           st.session_state.max_thresh2)
 
                 # Rerun after a short sleep to debounce slider drag
-                time.sleep(0.1)
+                time.sleep(0.15)
                 st.rerun()
 
             # If Density 0 is set to 255, force the rest to 255
@@ -722,7 +722,7 @@ def main():
                 else:
                     apply_thresholds_from_synthetic_range(cxr, lung_noised, st.session_state.max_thresh0,
                                  st.session_state.max_thresh1, st.session_state.max_thresh2)
-                time.sleep(0.1)
+                time.sleep(0.15)
                 st.rerun()
 
             # Disable next slider if max_slider1 is 255
@@ -754,7 +754,7 @@ def main():
                 else:
                     apply_thresholds_from_synthetic_range(cxr, lung_noised, st.session_state.max_thresh0,
                                              st.session_state.max_thresh1, st.session_state.max_thresh2)
-                time.sleep(0.1)
+                time.sleep(0.15)
                 st.rerun()
 
         with col4:
