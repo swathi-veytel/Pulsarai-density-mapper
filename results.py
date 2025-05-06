@@ -163,7 +163,7 @@ def show_results():
                         caption += f"\n(>= {t2})"
 
                     if overlay_mode:
-                        vis_img = overlay_dense_pixels(cxr, densities, up_to=d)
+                        vis_img = overlay_dense_pixels(synthetic, densities, up_to=d)
                     else:
                         progressive_mask = sum(densities[:d+1])
                         vis_img = apply_density_diff(cxr, synthetic, progressive_mask)
