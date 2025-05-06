@@ -125,7 +125,7 @@ def show_results():
     lung_mask_path = os.path.join(image_path_base, "mask")
 
     with st.spinner("Rendering image previews..."):
-        for image_name in images[:10]:
+        for image_name in images[:]:
             st.markdown(f"## \U0001F4F7 Image: `{image_name}`")
             cxr = load_image(os.path.join(base_cxr_path, f"cxr_{image_name}"))
             synthetic = load_image(os.path.join(synth_cxr_path, f"synthetic_{image_name}"))
@@ -151,7 +151,7 @@ def show_results():
                 densities = apply_thresholds_overlay(synthetic, lung_mask, t0, t1, t2)
 
                 col_dens = st.columns(4)
-                for d in range(max_density + 1):
+                for d in range(4):
                     caption = f"Density {d}"
                     if d == 0:
                         caption += f"\n(pixels < {t0})"
