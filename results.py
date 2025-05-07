@@ -142,7 +142,7 @@ def show_results():
                 if user_df.empty:
                     continue
 
-                st.markdown(f"### \U0001F464 {user}")
+                st.markdown(f"### \U0001F464 {user[:2].upper()}")
                 row = user_df.iloc[0]
                 t0, t1, t2 = int(row["max_thresh0"]), int(row["max_thresh1"]), int(row["max_thresh2"])
                 max_density = int(row["max_density"])
